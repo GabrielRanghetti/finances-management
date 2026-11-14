@@ -25,7 +25,7 @@ export default function SecurityPage() {
     });
 
     if (enableError) {
-      setError(enableError.message ?? messages.security.errorEnable);
+      setError(messages.security.errorEnable);
       return;
     }
 
@@ -44,7 +44,7 @@ export default function SecurityPage() {
     });
 
     if (verifyError) {
-      setError(verifyError.message ?? messages.security.errorTotp);
+      setError(messages.security.errorTotp);
       return;
     }
 
@@ -60,7 +60,7 @@ export default function SecurityPage() {
     });
 
     if (passkeyError) {
-      setError(passkeyError.message ?? messages.security.errorPasskey);
+      setError(messages.security.errorPasskey);
       return;
     }
 
