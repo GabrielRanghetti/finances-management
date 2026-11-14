@@ -34,12 +34,19 @@ export function getDb(): Database {
     return globalForDb.db;
   }
 
-  globalForDb.pglite =
-    process.env.PGLITE_MEMORY === "1"
-      ? new PGlite()
-      : new PGlite(PGLITE_DATA_DIR);
-  globalForDb.db = drizzlePglite(globalForDb.pglite, { schema });
-  return globalForDb.db;
+  // PGlite is for automated tests only (vitest.setup sets PGLITE_MEMORY=1).
+  if (process.env.PGLITE_MEMORY === "1" || process.env.VITEST === "true") {
+    globalForDb.pglite =
+      process.env.PGLITE_MEMORY === "1"
+        ? new PGlite()
+        : new PGlite(PGLITE_DATA_DIR);
+    globalForDb.db = drizzlePglite(globalForDb.pglite, { schema });
+    return globalForDb.db;
+  }
+
+  throw new Error(
+    "DATABASE_URL is required. Run npm run db:up and copy .env.example to .env.",
+  );
 }
 
 export async function closeDb(): Promise<void> {
