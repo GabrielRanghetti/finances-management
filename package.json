@@ -10,7 +10,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx src/db/migrate.ts"
+    "db:migrate": "tsx src/db/migrate.ts",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
