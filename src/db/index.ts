@@ -34,7 +34,10 @@ export function getDb(): Database {
     return globalForDb.db;
   }
 
-  globalForDb.pglite = new PGlite(PGLITE_DATA_DIR);
+  globalForDb.pglite =
+    process.env.PGLITE_MEMORY === "1"
+      ? new PGlite()
+      : new PGlite(PGLITE_DATA_DIR);
   globalForDb.db = drizzlePglite(globalForDb.pglite, { schema });
   return globalForDb.db;
 }
