@@ -12,7 +12,9 @@ export default function SignInPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [totpCode, setTotpCode] = useState("");
+  const [recoveryCode, setRecoveryCode] = useState("");
   const [needsTwoFactor, setNeedsTwoFactor] = useState(false);
+  const [useRecoveryCode, setUseRecoveryCode] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function onSubmit(event: FormEvent) {
@@ -20,12 +22,23 @@ export default function SignInPage() {
     setError(null);
 
     if (needsTwoFactor) {
-      const { error: verifyError } = await authClient.twoFactor.verifyTotp({
-        code: totpCode,
-      });
-      if (verifyError) {
-        setError(verifyError.message ?? messages.signIn.errorTotp);
-        return;
+      if (useRecoveryCode) {
+        const { error: verifyError } =
+          await authClient.twoFactor.verifyBackupCode({
+            code: recoveryCode,
+          });
+        if (verifyError) {
+          setError(verifyError.message ?? messages.signIn.errorRecovery);
+          return;
+        }
+      } else {
+        const { error: verifyError } = await authClient.twoFactor.verifyTotp({
+          code: totpCode,
+        });
+        if (verifyError) {
+          setError(verifyError.message ?? messages.signIn.errorTotp);
+          return;
+        }
       }
       router.push("/app");
       return;
@@ -72,6 +85,15 @@ export default function SignInPage() {
               required
             />
           </>
+        ) : useRecoveryCode ? (
+          <input
+            className="rounded border px-3 py-2"
+            type="text"
+            placeholder={messages.signIn.recoveryCode}
+            value={recoveryCode}
+            onChange={(e) => setRecoveryCode(e.target.value)}
+            required
+          />
         ) : (
           <input
             className="rounded border px-3 py-2"
@@ -87,6 +109,20 @@ export default function SignInPage() {
           {needsTwoFactor ? messages.signIn.verify : messages.signIn.submit}
         </button>
       </form>
+      {needsTwoFactor ? (
+        <button
+          className="text-left text-sm underline"
+          type="button"
+          onClick={() => {
+            setUseRecoveryCode((value) => !value);
+            setError(null);
+          }}
+        >
+          {useRecoveryCode
+            ? messages.signIn.useTotp
+            : messages.signIn.useRecoveryCode}
+        </button>
+      ) : null}
       <Link className="text-sm underline" href="/sign-up">
         {messages.signIn.createAccount}
       </Link>
