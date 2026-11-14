@@ -6,9 +6,10 @@ import { twoFactor } from "better-auth/plugins";
 
 import { getDb } from "@/db";
 import * as schema from "@/db/schema";
+import { messages } from "@/messages/pt-BR";
 
 export const auth = betterAuth({
-  appName: "Finanças",
+  appName: messages.appName,
   database: drizzleAdapter(getDb(), {
     provider: "pg",
     schema,
@@ -19,7 +20,7 @@ export const auth = betterAuth({
   },
   plugins: [
     twoFactor({
-      issuer: "Finanças",
+      issuer: messages.appName,
     }),
     passkey(),
     nextCookies(),
