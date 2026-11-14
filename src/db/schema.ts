@@ -6,11 +6,15 @@
  */
 import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
+import { user } from "./auth-schema";
+
 export * from "./auth-schema";
 
 export const accounts = pgTable("accounts", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: text("user_id").notNull(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   type: text("type").notNull(),
   currency: text("currency").notNull(),
