@@ -28,7 +28,7 @@ export default function SignInPage() {
             code: recoveryCode,
           });
         if (verifyError) {
-          setError(verifyError.message ?? messages.signIn.errorRecovery);
+          setError(messages.signIn.errorRecovery);
           return;
         }
       } else {
@@ -36,7 +36,7 @@ export default function SignInPage() {
           code: totpCode,
         });
         if (verifyError) {
-          setError(verifyError.message ?? messages.signIn.errorTotp);
+          setError(messages.signIn.errorTotp);
           return;
         }
       }
@@ -50,7 +50,7 @@ export default function SignInPage() {
     });
 
     if (signInError) {
-      setError(signInError.message ?? messages.signIn.errorGeneric);
+      setError(messages.signIn.errorGeneric);
       return;
     }
 

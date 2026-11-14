@@ -25,7 +25,7 @@ export default function SignUpPage() {
     });
 
     if (signUpError) {
-      setError(signUpError.message ?? messages.signUp.errorGeneric);
+      setError(messages.signUp.errorGeneric);
       return;
     }
 
