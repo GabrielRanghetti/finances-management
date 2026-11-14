@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
 import { drizzle as drizzlePostgres } from "drizzle-orm/postgres-js";
@@ -5,44 +7,47 @@ import postgres from "postgres";
 
 import * as schema from "./schema";
 
-const PGLITE_DATA_DIR = "./.pglite-data";
+export const PGLITE_DATA_DIR = path.join(process.cwd(), ".pglite-data");
 
 export type Database =
   | ReturnType<typeof drizzlePglite<typeof schema>>
   | ReturnType<typeof drizzlePostgres<typeof schema>>;
 
-let dbInstance: Database | undefined;
-let pgliteClient: PGlite | undefined;
-let postgresClient: ReturnType<typeof postgres> | undefined;
+type DbGlobal = {
+  db?: Database;
+  pglite?: PGlite;
+  postgres?: ReturnType<typeof postgres>;
+};
+
+const globalForDb = globalThis as typeof globalThis & DbGlobal;
 
 export function getDb(): Database {
-  if (dbInstance) {
-    return dbInstance;
+  if (globalForDb.db) {
+    return globalForDb.db;
   }
 
   const databaseUrl = process.env.DATABASE_URL;
 
   if (databaseUrl) {
-    postgresClient = postgres(databaseUrl);
-    dbInstance = drizzlePostgres(postgresClient, { schema });
-    return dbInstance;
+    globalForDb.postgres = postgres(databaseUrl);
+    globalForDb.db = drizzlePostgres(globalForDb.postgres, { schema });
+    return globalForDb.db;
   }
 
-  pgliteClient = new PGlite(PGLITE_DATA_DIR);
-  dbInstance = drizzlePglite(pgliteClient, { schema });
-  return dbInstance;
+  globalForDb.pglite = new PGlite(PGLITE_DATA_DIR);
+  globalForDb.db = drizzlePglite(globalForDb.pglite, { schema });
+  return globalForDb.db;
 }
 
 export async function closeDb(): Promise<void> {
-  if (postgresClient) {
-    await postgresClient.end();
-    postgresClient = undefined;
+  if (globalForDb.postgres) {
+    await globalForDb.postgres.end();
+    globalForDb.postgres = undefined;
   }
-  if (pgliteClient) {
-    await pgliteClient.close();
-    pgliteClient = undefined;
+  if (globalForDb.pglite) {
+    await globalForDb.pglite.close();
+    globalForDb.pglite = undefined;
   }
-  dbInstance = undefined;
+  globalForDb.db = undefined;
 }
 
-export { PGLITE_DATA_DIR };
