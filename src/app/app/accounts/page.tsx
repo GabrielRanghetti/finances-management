@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { listAccounts } from "@/db/accounts";
 import { auth } from "@/lib/auth";
+import { messages } from "@/messages/pt-BR";
 
 export const dynamic = "force-dynamic";
 
@@ -20,15 +21,15 @@ export default async function AccountsListPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 p-6">
-      <h1 className="text-2xl font-semibold">Contas</h1>
+      <h1 className="text-2xl font-semibold">{messages.accounts.title}</h1>
       {rows.length === 0 ? (
-        <p>Nenhuma conta.</p>
+        <p>{messages.accounts.empty}</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {rows.map((account) => (
             <li key={account.id}>
               <Link className="underline" href={`/app/accounts/${account.id}`}>
-                {account.name} ({account.currency})
+                {messages.accounts.linkLabel(account.name, account.currency)}
               </Link>
             </li>
           ))}

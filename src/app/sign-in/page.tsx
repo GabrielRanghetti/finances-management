@@ -1,9 +1,11 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { authClient } from "@/lib/auth-client";
+import { messages } from "@/messages/pt-BR";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -22,7 +24,7 @@ export default function SignInPage() {
         code: totpCode,
       });
       if (verifyError) {
-        setError(verifyError.message ?? "Código inválido");
+        setError(verifyError.message ?? messages.signIn.errorTotp);
         return;
       }
       router.push("/app");
@@ -35,7 +37,7 @@ export default function SignInPage() {
     });
 
     if (signInError) {
-      setError(signInError.message ?? "Falha ao entrar");
+      setError(signInError.message ?? messages.signIn.errorGeneric);
       return;
     }
 
@@ -49,14 +51,14 @@ export default function SignInPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-4 p-6">
-      <h1 className="text-2xl font-semibold">Entrar</h1>
+      <h1 className="text-2xl font-semibold">{messages.signIn.title}</h1>
       <form className="flex flex-col gap-3" onSubmit={onSubmit}>
         {!needsTwoFactor ? (
           <>
             <input
               className="rounded border px-3 py-2"
               type="email"
-              placeholder="Email"
+              placeholder={messages.signIn.email}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -64,7 +66,7 @@ export default function SignInPage() {
             <input
               className="rounded border px-3 py-2"
               type="password"
-              placeholder="Senha"
+              placeholder={messages.signIn.password}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -74,7 +76,7 @@ export default function SignInPage() {
           <input
             className="rounded border px-3 py-2"
             type="text"
-            placeholder="Código TOTP"
+            placeholder={messages.signIn.totp}
             value={totpCode}
             onChange={(e) => setTotpCode(e.target.value)}
             required
@@ -82,12 +84,12 @@ export default function SignInPage() {
         )}
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
         <button className="rounded bg-black px-3 py-2 text-white" type="submit">
-          {needsTwoFactor ? "Verificar" : "Entrar"}
+          {needsTwoFactor ? messages.signIn.verify : messages.signIn.submit}
         </button>
       </form>
-      <a className="text-sm underline" href="/sign-up">
-        Criar conta
-      </a>
+      <Link className="text-sm underline" href="/sign-up">
+        {messages.signIn.createAccount}
+      </Link>
     </main>
   );
 }

@@ -1,9 +1,11 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { authClient } from "@/lib/auth-client";
+import { messages } from "@/messages/pt-BR";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -23,7 +25,7 @@ export default function SignUpPage() {
     });
 
     if (signUpError) {
-      setError(signUpError.message ?? "Falha ao criar conta");
+      setError(signUpError.message ?? messages.signUp.errorGeneric);
       return;
     }
 
@@ -32,12 +34,12 @@ export default function SignUpPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-4 p-6">
-      <h1 className="text-2xl font-semibold">Criar conta</h1>
+      <h1 className="text-2xl font-semibold">{messages.signUp.title}</h1>
       <form className="flex flex-col gap-3" onSubmit={onSubmit}>
         <input
           className="rounded border px-3 py-2"
           type="text"
-          placeholder="Nome"
+          placeholder={messages.signUp.name}
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
@@ -45,7 +47,7 @@ export default function SignUpPage() {
         <input
           className="rounded border px-3 py-2"
           type="email"
-          placeholder="Email"
+          placeholder={messages.signUp.email}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
@@ -53,7 +55,7 @@ export default function SignUpPage() {
         <input
           className="rounded border px-3 py-2"
           type="password"
-          placeholder="Senha"
+          placeholder={messages.signUp.password}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
@@ -61,12 +63,12 @@ export default function SignUpPage() {
         />
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
         <button className="rounded bg-black px-3 py-2 text-white" type="submit">
-          Criar conta
+          {messages.signUp.submit}
         </button>
       </form>
-      <a className="text-sm underline" href="/sign-in">
-        Já tenho conta
-      </a>
+      <Link className="text-sm underline" href="/sign-in">
+        {messages.signUp.hasAccount}
+      </Link>
     </main>
   );
 }

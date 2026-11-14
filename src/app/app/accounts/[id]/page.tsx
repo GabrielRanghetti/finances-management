@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { getAccount } from "@/db/accounts";
 import { auth } from "@/lib/auth";
+import { messages } from "@/messages/pt-BR";
 
 export const dynamic = "force-dynamic";
 
@@ -31,11 +32,11 @@ export default async function AccountDetailPage({ params }: Props) {
       <h1 className="text-2xl font-semibold">{account.name}</h1>
       <dl className="grid gap-2 text-sm">
         <div>
-          <dt className="font-medium">Tipo</dt>
+          <dt className="font-medium">{messages.accounts.type}</dt>
           <dd>{account.type}</dd>
         </div>
         <div>
-          <dt className="font-medium">Moeda</dt>
+          <dt className="font-medium">{messages.accounts.currency}</dt>
           <dd>{account.currency}</dd>
         </div>
       </dl>
