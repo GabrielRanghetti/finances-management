@@ -9,6 +9,11 @@ import {
 } from "./entities";
 import { getDb } from "./index";
 import { user } from "./schema";
+import {
+  createTransaction,
+  getTransaction,
+  listTransactions,
+} from "./transactions";
 
 beforeAll(async () => {
   const db = getDb();
@@ -82,5 +87,24 @@ describe("user data isolation", () => {
 
     expect(await getEntity(userA.id, entityA.id)).not.toBeNull();
     expect(await getEntity(userA.id, entityB.id)).toBeNull();
+
+    const txA = await createTransaction(userA.id, {
+      accountId: accountA.id,
+      date: "2026-02-01",
+      amountCents: 1000,
+      description: "Tx A",
+    });
+    const txB = await createTransaction(userB.id, {
+      accountId: accountB.id,
+      date: "2026-02-01",
+      amountCents: 2000,
+      description: "Tx B",
+    });
+
+    const txListA = await listTransactions(userA.id);
+    const txListB = await listTransactions(userB.id);
+    expect(txListA.map((row) => row.id)).toEqual([txA!.id]);
+    expect(txListB.map((row) => row.id)).toEqual([txB!.id]);
+    expect(await getTransaction(userA.id, txB!.id)).toBeNull();
   });
 });

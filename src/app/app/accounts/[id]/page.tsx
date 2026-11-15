@@ -4,7 +4,9 @@ import { notFound, redirect } from "next/navigation";
 
 import { archiveAccountAction } from "../actions";
 import { getAccountWithEntity } from "@/db/accounts";
+import { listAccountAmounts } from "@/db/transactions";
 import type { AccountType } from "@/db/schema";
+import { accountBalanceCents, formatCentsToBrl } from "@/domain/money";
 import { auth } from "@/lib/auth";
 import { messages } from "@/messages/pt-BR";
 
@@ -30,6 +32,8 @@ export default async function AccountDetailPage({ params }: Props) {
     notFound();
   }
 
+  const amounts = (await listAccountAmounts(session.user.id, account.id)) ?? [];
+  const balanceCents = accountBalanceCents(amounts);
   const archive = archiveAccountAction.bind(null, account.id);
   const typeLabel =
     messages.accounts.types[account.type as AccountType] ?? account.type;
@@ -43,6 +47,12 @@ export default async function AccountDetailPage({ params }: Props) {
         </Link>
       </div>
       <dl className="grid gap-2 text-sm">
+        <div>
+          <dt className="font-medium">{messages.accounts.balance}</dt>
+          <dd>
+            R$ {formatCentsToBrl(balanceCents)}
+          </dd>
+        </div>
         <div>
           <dt className="font-medium">{messages.accounts.type}</dt>
           <dd>{typeLabel}</dd>

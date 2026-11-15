@@ -36,6 +36,13 @@
       "when": 1794762642451,
       "tag": "0004_old_gamma_corps",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794762815239,
+      "tag": "0005_chubby_morgan_stark",
+      "breakpoints": true
     }
   ]
 }

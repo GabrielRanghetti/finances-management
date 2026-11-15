@@ -6,6 +6,7 @@ const navItems = [
   { href: "/app", label: messages.nav.dashboard },
   { href: "/app/entities", label: messages.nav.entities },
   { href: "/app/accounts", label: messages.nav.accounts },
+  { href: "/app/transactions", label: messages.nav.transactions },
   { href: "/app/investments", label: messages.nav.investments },
   { href: "/app/budget", label: messages.nav.budget },
   { href: "/app/taxes", label: messages.nav.taxes },
