@@ -1,3 +1,5 @@
+import { addMonths } from "./installments";
+
 export const loanSystems = ["price", "sac"] as const;
 export type LoanSystem = (typeof loanSystems)[number];
 
@@ -17,22 +19,6 @@ export type LoanTermsInput = {
   firstPaymentDate: string;
   system: LoanSystem;
 };
-
-function addMonths(isoDate: string, months: number): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
-  if (!match) {
-    throw new Error("invalid date");
-  }
-  const year = Number(match[1]);
-  const monthIndex = Number(match[2]) - 1 + months;
-  const day = Number(match[3]);
-  const target = new Date(Date.UTC(year, monthIndex, 1));
-  const lastDay = new Date(
-    Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0),
-  ).getUTCDate();
-  target.setUTCDate(Math.min(day, lastDay));
-  return target.toISOString().slice(0, 10);
-}
 
 function assertTerms(terms: LoanTermsInput) {
   if (

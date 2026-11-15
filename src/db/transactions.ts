@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 
 import { getAccount } from "./accounts";
 import { getCategory } from "./categories";
-import { getDb } from "./index";
+import { getDb, type Database } from "./index";
 import { accounts, entities, transactions } from "./schema";
 import {
   installmentDates,
@@ -146,20 +146,28 @@ export async function listAccountAmounts(userId: string, accountId: string) {
   return rows.map((row) => row.amountCents);
 }
 
-export async function createTransaction(userId: string, input: TransactionInput) {
+export async function createTransaction(
+  userId: string,
+  input: TransactionInput,
+  db?: Database,
+) {
   const uid = requireUserId(userId);
-  const account = await getAccount(uid, input.accountId);
-  if (!account) {
-    return null;
-  }
-  if (input.categoryId) {
-    const category = await getCategory(uid, input.categoryId);
-    if (!category) {
+  const executor = db ?? getDb();
+  // When db is a transaction client, skip reads on getDb() (deadlocks PGlite).
+  if (!db) {
+    const account = await getAccount(uid, input.accountId);
+    if (!account) {
       return null;
+    }
+    if (input.categoryId) {
+      const category = await getCategory(uid, input.categoryId);
+      if (!category) {
+        return null;
+      }
     }
   }
 
-  const rows = await getDb()
+  const rows = await executor
     .insert(transactions)
     .values({
       userId: uid,
@@ -175,26 +183,34 @@ export async function createTransaction(userId: string, input: TransactionInput)
   return rows[0];
 }
 
-export async function createTransfer(userId: string, input: TransferInput) {
+export async function createTransfer(
+  userId: string,
+  input: TransferInput,
+  db?: Database,
+) {
   const uid = requireUserId(userId);
   if (input.fromAccountId === input.toAccountId || input.amountCents <= 0) {
     return null;
   }
 
-  const fromAccount = await getAccount(uid, input.fromAccountId);
-  const toAccount = await getAccount(uid, input.toAccountId);
-  if (!fromAccount || !toAccount) {
-    return null;
-  }
-  if (input.categoryId) {
-    const category = await getCategory(uid, input.categoryId);
-    if (!category) {
+  const executor = db ?? getDb();
+  // When db is a transaction client, skip reads on getDb() (deadlocks PGlite).
+  if (!db) {
+    const fromAccount = await getAccount(uid, input.fromAccountId);
+    const toAccount = await getAccount(uid, input.toAccountId);
+    if (!fromAccount || !toAccount) {
       return null;
+    }
+    if (input.categoryId) {
+      const category = await getCategory(uid, input.categoryId);
+      if (!category) {
+        return null;
+      }
     }
   }
 
   const transferId = randomUUID();
-  const rows = await getDb()
+  const rows = await executor
     .insert(transactions)
     .values([
       {

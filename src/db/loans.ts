@@ -2,20 +2,17 @@ import { and, eq } from "drizzle-orm";
 
 import { getAccount } from "./accounts";
 import { ensureDefaultCategories, ensureNamedCategory } from "./categories";
-import { getDb } from "./index";
+import { getDb, type Database } from "./index";
 import { loanTerms } from "./schema";
-import {
-  createTransaction,
-  createTransfer,
-  listAccountAmounts,
-  listTransactions,
-} from "./transactions";
+import * as transactionsDb from "./transactions";
+import { listAccountAmounts, listTransactions } from "./transactions";
 import {
   buildLoanSchedule,
   loanSystems,
   type LoanSystem,
 } from "@/domain/loans";
 import { accountBalanceCents } from "@/domain/money";
+import { messages } from "@/messages/pt-BR";
 
 export type LoanTermsInput = {
   accountId: string;
@@ -75,30 +72,41 @@ export async function createLoanWithTerms(
     return null;
   }
 
-  const [terms] = await getDb()
-    .insert(loanTerms)
-    .values({
-      userId: uid,
-      accountId: input.accountId,
-      principalCents: input.principalCents,
-      monthlyInterestRate: String(input.monthlyInterestRate),
-      termMonths: input.termMonths,
-      firstPaymentDate: input.firstPaymentDate,
-      system: input.system,
-    })
-    .returning();
+  try {
+    return await getDb().transaction(async (tx) => {
+      const db = tx as unknown as Database;
+      const [terms] = await db
+        .insert(loanTerms)
+        .values({
+          userId: uid,
+          accountId: input.accountId,
+          principalCents: input.principalCents,
+          monthlyInterestRate: String(input.monthlyInterestRate),
+          termMonths: input.termMonths,
+          firstPaymentDate: input.firstPaymentDate,
+          system: input.system,
+        })
+        .returning();
 
-  const opening = await createTransaction(uid, {
-    accountId: input.accountId,
-    date: input.firstPaymentDate,
-    amountCents: -input.principalCents,
-    description: "Principal",
-  });
-  if (!opening) {
+      const opening = await transactionsDb.createTransaction(
+        uid,
+        {
+          accountId: input.accountId,
+          date: input.firstPaymentDate,
+          amountCents: -input.principalCents,
+          description: messages.accounts.loanPrincipal,
+        },
+        db,
+      );
+      if (!opening) {
+        throw new Error("opening transaction failed");
+      }
+
+      return { terms, opening };
+    });
+  } catch {
     return null;
   }
-
-  return { terms, opening };
 }
 
 export function scheduleForTerms(terms: {
@@ -162,43 +170,67 @@ export async function recordLoanPayment(
   }
 
   await ensureDefaultCategories(uid);
-  const juros = await ensureNamedCategory(uid, "Juros", "expense");
+  const juros = await ensureNamedCategory(
+    uid,
+    messages.accounts.loanInterest,
+    "expense",
+  );
   if (!juros) {
     return null;
   }
 
-  const interest =
-    line.interestCents === 0
-      ? null
-      : await createTransaction(uid, {
-          accountId: input.loanAccountId,
+  const interestDescription = `${messages.accounts.loanInterest} ${input.installment}/${terms.termMonths}`;
+  const paymentDescription = `${messages.accounts.loanInstallment} ${input.installment}/${terms.termMonths}`;
+
+  try {
+    const { interest, transfer } = await getDb().transaction(async (tx) => {
+      const db = tx as unknown as Database;
+      const interest =
+        line.interestCents === 0
+          ? null
+          : await transactionsDb.createTransaction(
+              uid,
+              {
+                accountId: input.loanAccountId,
+                date: line.date,
+                amountCents: 0 - line.interestCents,
+                description: interestDescription,
+                categoryId: juros.id,
+              },
+              db,
+            );
+      if (line.interestCents > 0 && !interest) {
+        throw new Error("interest charge failed");
+      }
+
+      const transfer = await transactionsDb.createTransfer(
+        uid,
+        {
+          fromAccountId: input.fromAccountId,
+          toAccountId: input.loanAccountId,
           date: line.date,
-          amountCents: 0 - line.interestCents,
-          description: `Juros ${input.installment}/${terms.termMonths}`,
-          categoryId: juros.id,
-        });
-  if (line.interestCents > 0 && !interest) {
+          amountCents: line.paymentCents,
+          description: paymentDescription,
+        },
+        db,
+      );
+      if (!transfer) {
+        throw new Error("loan payment transfer failed");
+      }
+
+      return { interest, transfer };
+    });
+
+    const amounts = (await listAccountAmounts(uid, input.loanAccountId)) ?? [];
+    const balanceCents = accountBalanceCents(amounts);
+
+    return {
+      interest,
+      transfer,
+      outstandingCents: line.outstandingCents,
+      balanceCents,
+    };
+  } catch {
     return null;
   }
-
-  const transfer = await createTransfer(uid, {
-    fromAccountId: input.fromAccountId,
-    toAccountId: input.loanAccountId,
-    date: line.date,
-    amountCents: line.paymentCents,
-    description: `Parcela ${input.installment}/${terms.termMonths}`,
-  });
-  if (!transfer) {
-    return null;
-  }
-
-  const amounts = (await listAccountAmounts(uid, input.loanAccountId)) ?? [];
-  const balanceCents = accountBalanceCents(amounts);
-
-  return {
-    interest,
-    transfer,
-    outstandingCents: line.outstandingCents,
-    balanceCents,
-  };
 }
