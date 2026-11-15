@@ -84,8 +84,9 @@ export default async function AccountsListPage({ searchParams }: Props) {
           className="ml-auto underline"
           href={hrefFor({ archived: !includeArchived })}
         >
-          {messages.accounts.showArchived}
-          {includeArchived ? " ✓" : ""}
+          {includeArchived
+            ? messages.accounts.showArchivedOn
+            : messages.accounts.showArchived}
         </Link>
       </div>
 
@@ -102,9 +103,11 @@ export default async function AccountsListPage({ searchParams }: Props) {
                 {messages.accounts.types[account.type as keyof typeof messages.accounts.types] ??
                   account.type}
                 {account.entity
-                  ? ` · ${account.entity.name}`
+                  ? `${messages.accounts.metaSeparator}${account.entity.name}`
                   : ""}
-                {account.archived ? ` · ${messages.accounts.archived}` : ""}
+                {account.archived
+                  ? `${messages.accounts.metaSeparator}${messages.accounts.archived}`
+                  : ""}
               </span>
             </li>
           ))}

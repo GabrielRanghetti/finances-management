@@ -151,12 +151,12 @@ export default async function TransactionsListPage({ searchParams }: Props) {
 
       <section className="grid gap-2 text-sm">
         <p>
-          {messages.transactions.incomeTotal}: R${" "}
-          {formatCentsToBrl(periodTotals.incomeCents)}
+          {messages.transactions.incomeTotal}:{" "}
+          {messages.money(formatCentsToBrl(periodTotals.incomeCents))}
         </p>
         <p>
-          {messages.transactions.expenseTotal}: R${" "}
-          {formatCentsToBrl(periodTotals.expenseCents)}
+          {messages.transactions.expenseTotal}:{" "}
+          {messages.money(formatCentsToBrl(periodTotals.expenseCents))}
         </p>
         <h2 className="mt-2 font-medium">{messages.transactions.totalsTitle}</h2>
         {byCategory.size === 0 ? (
@@ -165,8 +165,8 @@ export default async function TransactionsListPage({ searchParams }: Props) {
           <ul className="flex flex-col gap-1">
             {[...byCategory.entries()].map(([categoryId, total]) => (
               <li key={categoryId}>
-                {categoryName.get(categoryId) ?? categoryId}: R${" "}
-                {formatCentsToBrl(total)}
+                {categoryName.get(categoryId) ?? categoryId}:{" "}
+                {messages.money(formatCentsToBrl(total))}
               </li>
             ))}
           </ul>
@@ -182,8 +182,10 @@ export default async function TransactionsListPage({ searchParams }: Props) {
               <span>{row.date}</span>
               <span>{accountName.get(row.accountId) ?? row.accountId}</span>
               <span>
-                R$ {formatCentsToBrl(row.amountCents)}
-                {row.transferId ? ` (${messages.transactions.transferTag})` : ""}
+                {messages.money(formatCentsToBrl(row.amountCents))}
+                {row.transferId
+                  ? ` (${messages.transactions.transferTag})`
+                  : ""}
               </span>
               <span>{row.description}</span>
               <span className="text-zinc-600">

@@ -1,6 +1,8 @@
 export const messages = {
   appName: "Finanças",
   appDescription: "Gestão pessoal de finanças e patrimônio",
+  emptyValue: "—",
+  money: (formattedAmount: string) => `R$ ${formattedAmount}`,
   nav: {
     dashboard: "Painel",
     entities: "Entidades",
@@ -70,6 +72,7 @@ export const messages = {
     edit: "Editar conta",
     archive: "Arquivar",
     archived: "Arquivada",
+    archivedYes: "✓",
     save: "Salvar",
     cancel: "Cancelar",
     name: "Nome",
@@ -80,6 +83,8 @@ export const messages = {
     filterEntity: "Filtrar por entidade",
     filterBoth: "PF e PJ",
     showArchived: "Mostrar arquivadas",
+    showArchivedOn: "Mostrar arquivadas ✓",
+    metaSeparator: " · ",
     types: {
       bank: "Banco",
       cash: "Dinheiro",
