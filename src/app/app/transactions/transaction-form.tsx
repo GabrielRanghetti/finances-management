@@ -1,13 +1,13 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import Link from "next/link";
 
 import { messages } from "@/messages/pt-BR";
 
 type FormState = { error?: string } | undefined;
 
-type Option = { id: string; name: string };
+type Option = { id: string; name: string; type?: string };
 
 type Defaults = {
   date: string;
@@ -18,10 +18,11 @@ type Defaults = {
   accountId?: string;
   fromAccountId?: string;
   toAccountId?: string;
+  installmentCount?: number;
 };
 
 type Props = {
-  mode: "income" | "expense" | "transfer";
+  mode: "income" | "expense" | "transfer" | "installment-group";
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
   accounts: Option[];
   categories: Option[];
@@ -37,30 +38,43 @@ export function TransactionForm({
 }: Props) {
   const [state, formAction] = useActionState(action, undefined);
   const today = new Date().toISOString().slice(0, 10);
+  const [accountId, setAccountId] = useState(
+    defaults?.accountId ?? accounts[0]?.id ?? "",
+  );
+  const selectedAccount = useMemo(
+    () => accounts.find((account) => account.id === accountId),
+    [accounts, accountId],
+  );
+  const showInstallments =
+    mode === "expense" && selectedAccount?.type === "credit_card";
 
   return (
     <form action={formAction} className="flex flex-col gap-3">
-      <label className="flex flex-col gap-1 text-sm">
-        {messages.transactions.date}
-        <input
-          className="rounded border px-3 py-2"
-          type="date"
-          name="date"
-          required
-          defaultValue={defaults?.date ?? today}
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        {messages.transactions.amount}
-        <input
-          className="rounded border px-3 py-2"
-          name="amount"
-          required
-          placeholder={messages.transactions.amountPlaceholder}
-          inputMode="decimal"
-          defaultValue={defaults?.amount ?? ""}
-        />
-      </label>
+      {mode !== "installment-group" ? (
+        <label className="flex flex-col gap-1 text-sm">
+          {messages.transactions.date}
+          <input
+            className="rounded border px-3 py-2"
+            type="date"
+            name="date"
+            required
+            defaultValue={defaults?.date ?? today}
+          />
+        </label>
+      ) : null}
+      {mode !== "installment-group" ? (
+        <label className="flex flex-col gap-1 text-sm">
+          {messages.transactions.amount}
+          <input
+            className="rounded border px-3 py-2"
+            name="amount"
+            required
+            placeholder={messages.transactions.amountPlaceholder}
+            inputMode="decimal"
+            defaultValue={defaults?.amount ?? ""}
+          />
+        </label>
+      ) : null}
       <label className="flex flex-col gap-1 text-sm">
         {messages.transactions.description}
         <input
@@ -111,14 +125,15 @@ export function TransactionForm({
             </select>
           </label>
         </>
-      ) : (
+      ) : mode !== "installment-group" ? (
         <label className="flex flex-col gap-1 text-sm">
           {messages.transactions.account}
           <select
             className="rounded border px-3 py-2"
             name="accountId"
             required
-            defaultValue={defaults?.accountId ?? accounts[0]?.id ?? ""}
+            value={accountId}
+            onChange={(event) => setAccountId(event.target.value)}
           >
             {accounts.map((account) => (
               <option key={account.id} value={account.id}>
@@ -127,7 +142,24 @@ export function TransactionForm({
             ))}
           </select>
         </label>
-      )}
+      ) : null}
+
+      {showInstallments ? (
+        <label className="flex flex-col gap-1 text-sm">
+          {messages.transactions.installments}
+          <input
+            className="rounded border px-3 py-2"
+            name="installmentCount"
+            type="number"
+            min={1}
+            max={60}
+            defaultValue={defaults?.installmentCount ?? 1}
+          />
+          <span className="text-zinc-600">
+            {messages.transactions.installmentsHint}
+          </span>
+        </label>
+      ) : null}
 
       <label className="flex flex-col gap-1 text-sm">
         {messages.transactions.category}
@@ -145,15 +177,17 @@ export function TransactionForm({
         </select>
       </label>
 
-      <label className="flex flex-col gap-1 text-sm">
-        {messages.transactions.notes}
-        <textarea
-          className="rounded border px-3 py-2"
-          name="notes"
-          rows={2}
-          defaultValue={defaults?.notes ?? ""}
-        />
-      </label>
+      {mode !== "installment-group" ? (
+        <label className="flex flex-col gap-1 text-sm">
+          {messages.transactions.notes}
+          <textarea
+            className="rounded border px-3 py-2"
+            name="notes"
+            rows={2}
+            defaultValue={defaults?.notes ?? ""}
+          />
+        </label>
+      ) : null}
 
       {state?.error ? <p className="text-sm text-red-700">{state.error}</p> : null}
 

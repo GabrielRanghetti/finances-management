@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 
 import type { AccountType } from "@/db/schema";
@@ -23,11 +23,13 @@ type Props = {
     currency: string;
     entityId: string;
     institution: string | null;
+    closingDay: number | null;
   };
 };
 
 export function AccountForm({ action, entities, defaults }: Props) {
   const [state, formAction] = useActionState(action, undefined);
+  const [type, setType] = useState<AccountType>(defaults?.type ?? "bank");
 
   return (
     <form action={formAction} className="flex flex-col gap-3">
@@ -46,11 +48,12 @@ export function AccountForm({ action, entities, defaults }: Props) {
           className="rounded border px-3 py-2"
           name="type"
           required
-          defaultValue={defaults?.type ?? "bank"}
+          value={type}
+          onChange={(event) => setType(event.target.value as AccountType)}
         >
-          {accountTypes.map((type) => (
-            <option key={type} value={type}>
-              {messages.accounts.types[type]}
+          {accountTypes.map((accountType) => (
+            <option key={accountType} value={accountType}>
+              {messages.accounts.types[accountType]}
             </option>
           ))}
         </select>
@@ -72,6 +75,20 @@ export function AccountForm({ action, entities, defaults }: Props) {
           defaultValue={defaults?.institution ?? ""}
         />
       </label>
+      {type === "credit_card" ? (
+        <label className="flex flex-col gap-1 text-sm">
+          {messages.accounts.closingDay}
+          <input
+            className="rounded border px-3 py-2"
+            name="closingDay"
+            type="number"
+            min={1}
+            max={31}
+            required
+            defaultValue={defaults?.closingDay ?? 10}
+          />
+        </label>
+      ) : null}
       <label className="flex flex-col gap-1 text-sm">
         {messages.accounts.entity}
         <select

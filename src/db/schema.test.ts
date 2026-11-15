@@ -13,6 +13,7 @@ test("accounts table carries user_id and no float money columns", () => {
       "type",
       "currency",
       "institution",
+      "closingDay",
       "archived",
       "createdAt",
     ]),

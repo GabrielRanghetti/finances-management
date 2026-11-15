@@ -15,6 +15,7 @@ export type AccountInput = {
   currency: string;
   entityId?: string;
   institution?: string | null;
+  closingDay?: number | null;
 };
 
 export type AccountListFilter = {
@@ -93,6 +94,8 @@ export async function createAccount(userId: string, input: AccountInput) {
       type: input.type,
       currency: input.currency,
       institution: input.institution ?? null,
+      closingDay:
+        input.type === "credit_card" ? (input.closingDay ?? null) : null,
     })
     .returning();
   return rows[0];
@@ -112,6 +115,8 @@ export async function updateAccount(
       currency: input.currency,
       entityId: input.entityId,
       institution: input.institution ?? null,
+      closingDay:
+        input.type === "credit_card" ? (input.closingDay ?? null) : null,
     })
     .where(and(eq(accounts.userId, uid), eq(accounts.id, accountId)))
     .returning();

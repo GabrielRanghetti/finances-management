@@ -50,6 +50,13 @@
       "when": 1794765138750,
       "tag": "0006_tense_speed",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794777937819,
+      "tag": "0007_superb_network",
+      "breakpoints": true
     }
   ]
 }

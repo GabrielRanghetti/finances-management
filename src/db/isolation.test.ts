@@ -10,8 +10,11 @@ import {
 import { getDb } from "./index";
 import { user } from "./schema";
 import {
+  cancelInstallmentGroup,
+  createInstallmentPurchase,
   createTransaction,
   getTransaction,
+  listInstallmentGroup,
   listTransactions,
 } from "./transactions";
 
@@ -106,5 +109,56 @@ describe("user data isolation", () => {
     expect(txListA.map((row) => row.id)).toEqual([txA!.id]);
     expect(txListB.map((row) => row.id)).toEqual([txB!.id]);
     expect(await getTransaction(userA.id, txB!.id)).toBeNull();
+
+    const cardA = await createAccount(userA.id, {
+      name: "Cartão A",
+      type: "credit_card",
+      currency: "BRL",
+      entityId: entityA.id,
+      closingDay: 10,
+    });
+    const cardB = await createAccount(userB.id, {
+      name: "Cartão B",
+      type: "credit_card",
+      currency: "BRL",
+      entityId: entityB.id,
+      closingDay: 5,
+    });
+    const installmentsA = await createInstallmentPurchase(userA.id, {
+      accountId: cardA.id,
+      date: "2026-02-01",
+      amountCents: 1000,
+      description: "Loja A",
+      installmentCount: 2,
+    });
+    const installmentsB = await createInstallmentPurchase(userB.id, {
+      accountId: cardB.id,
+      date: "2026-02-01",
+      amountCents: 2000,
+      description: "Loja B",
+      installmentCount: 2,
+    });
+    expect(installmentsA).not.toBeNull();
+    expect(installmentsB).not.toBeNull();
+
+    const groupA = await listInstallmentGroup(
+      userA.id,
+      installmentsA!.installmentGroupId,
+    );
+    const groupCross = await listInstallmentGroup(
+      userA.id,
+      installmentsB!.installmentGroupId,
+    );
+    expect(groupA).toHaveLength(2);
+    expect(groupCross).toHaveLength(0);
+    expect(
+      await cancelInstallmentGroup(
+        userA.id,
+        installmentsB!.installmentGroupId,
+      ),
+    ).toBeNull();
+    expect(
+      await listInstallmentGroup(userB.id, installmentsB!.installmentGroupId),
+    ).toHaveLength(2);
   });
 });

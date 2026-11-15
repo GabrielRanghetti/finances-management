@@ -19,6 +19,7 @@ function parseAccountInput(formData: FormData) {
   const currency = String(formData.get("currency") ?? "").trim().toUpperCase();
   const entityId = String(formData.get("entityId") ?? "").trim();
   const institution = String(formData.get("institution") ?? "").trim();
+  const closingDayRaw = String(formData.get("closingDay") ?? "").trim();
 
   if (
     !name ||
@@ -29,6 +30,20 @@ function parseAccountInput(formData: FormData) {
     return { error: messages.accounts.errorGeneric };
   }
 
+  let closingDay: number | null = null;
+  if (type === "credit_card") {
+    const parsed = Number(closingDayRaw);
+    if (
+      !closingDayRaw ||
+      !Number.isInteger(parsed) ||
+      parsed < 1 ||
+      parsed > 31
+    ) {
+      return { error: messages.accounts.errorClosingDay };
+    }
+    closingDay = parsed;
+  }
+
   return {
     input: {
       name,
@@ -36,6 +51,7 @@ function parseAccountInput(formData: FormData) {
       currency,
       entityId,
       institution: institution || null,
+      closingDay,
     },
   };
 }

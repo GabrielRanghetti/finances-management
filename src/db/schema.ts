@@ -9,6 +9,7 @@ import {
   bigint,
   boolean,
   date,
+  integer,
   pgTable,
   text,
   timestamp,
@@ -75,6 +76,8 @@ export const accounts = pgTable("accounts", {
   type: text("type").notNull(),
   currency: text("currency").notNull(),
   institution: text("institution"),
+  /** Day of month when a credit card statement closes (1–31). */
+  closingDay: integer("closing_day"),
   archived: boolean("archived").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

@@ -5,6 +5,11 @@ import { getAccount } from "./accounts";
 import { getCategory } from "./categories";
 import { getDb } from "./index";
 import { accounts, entities, transactions } from "./schema";
+import {
+  installmentDates,
+  installmentDescription,
+  splitInstallmentAmounts,
+} from "@/domain/installments";
 
 export type TransactionInput = {
   accountId: string;
@@ -23,6 +28,21 @@ export type TransferInput = {
   description: string;
   categoryId?: string | null;
   notes?: string | null;
+};
+
+export type InstallmentPurchaseInput = {
+  accountId: string;
+  date: string;
+  amountCents: number;
+  description: string;
+  installmentCount: number;
+  categoryId?: string | null;
+  notes?: string | null;
+};
+
+export type InstallmentGroupUpdateInput = {
+  description: string;
+  categoryId?: string | null;
 };
 
 export type TransactionListFilter = {
@@ -365,4 +385,123 @@ export async function deleteTransaction(userId: string, transactionId: string) {
     )
     .returning();
   return rows;
+}
+
+export async function createInstallmentPurchase(
+  userId: string,
+  input: InstallmentPurchaseInput,
+) {
+  const uid = requireUserId(userId);
+  if (input.amountCents <= 0 || input.installmentCount < 1) {
+    return null;
+  }
+
+  const account = await getAccount(uid, input.accountId);
+  if (!account || account.type !== "credit_card") {
+    return null;
+  }
+  if (input.categoryId) {
+    const category = await getCategory(uid, input.categoryId);
+    if (!category) {
+      return null;
+    }
+  }
+
+  const amounts = splitInstallmentAmounts(
+    input.amountCents,
+    input.installmentCount,
+  );
+  const dates = installmentDates(input.date, input.installmentCount);
+  const installmentGroupId = randomUUID();
+
+  const rows = await getDb()
+    .insert(transactions)
+    .values(
+      amounts.map((amountCents, index) => ({
+        userId: uid,
+        accountId: input.accountId,
+        date: dates[index],
+        amountCents: -amountCents,
+        description: installmentDescription(
+          input.description,
+          index + 1,
+          input.installmentCount,
+        ),
+        categoryId: input.categoryId ?? null,
+        notes: input.notes ?? null,
+        installmentGroupId,
+        source: "manual" as const,
+      })),
+    )
+    .returning();
+
+  return { installmentGroupId, transactions: rows };
+}
+
+export async function listInstallmentGroup(
+  userId: string,
+  installmentGroupId: string,
+) {
+  const uid = requireUserId(userId);
+  return getDb()
+    .select()
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.userId, uid),
+        eq(transactions.installmentGroupId, installmentGroupId),
+      ),
+    )
+    .orderBy(sql`${transactions.date} asc, ${transactions.createdAt} asc`);
+}
+
+export async function updateInstallmentGroup(
+  userId: string,
+  installmentGroupId: string,
+  input: InstallmentGroupUpdateInput,
+) {
+  const uid = requireUserId(userId);
+  const group = await listInstallmentGroup(uid, installmentGroupId);
+  if (group.length === 0) {
+    return null;
+  }
+  if (input.categoryId) {
+    const category = await getCategory(uid, input.categoryId);
+    if (!category) {
+      return null;
+    }
+  }
+
+  const count = group.length;
+  const updated = [];
+  for (let index = 0; index < group.length; index += 1) {
+    const row = group[index];
+    const [next] = await getDb()
+      .update(transactions)
+      .set({
+        description: installmentDescription(input.description, index + 1, count),
+        categoryId: input.categoryId ?? null,
+      })
+      .where(and(eq(transactions.userId, uid), eq(transactions.id, row.id)))
+      .returning();
+    updated.push(next);
+  }
+  return updated;
+}
+
+export async function cancelInstallmentGroup(
+  userId: string,
+  installmentGroupId: string,
+) {
+  const uid = requireUserId(userId);
+  const rows = await getDb()
+    .delete(transactions)
+    .where(
+      and(
+        eq(transactions.userId, uid),
+        eq(transactions.installmentGroupId, installmentGroupId),
+      ),
+    )
+    .returning();
+  return rows.length > 0 ? rows : null;
 }
