@@ -8,6 +8,7 @@ import {
   type AccountType,
   type EntityType,
 } from "./schema";
+import { isValuedAccountType } from "@/domain/valuations";
 
 export type AccountInput = {
   name: string;
@@ -16,6 +17,8 @@ export type AccountInput = {
   entityId?: string;
   institution?: string | null;
   closingDay?: number | null;
+  acquisitionCostCents?: number | null;
+  acquisitionDate?: string | null;
 };
 
 export type AccountListFilter = {
@@ -85,6 +88,7 @@ export async function createAccount(userId: string, input: AccountInput) {
   const uid = requireUserId(userId);
   const entityId =
     input.entityId ?? (await ensureDefaultPfEntity(uid)).id;
+  const valued = isValuedAccountType(input.type);
   const rows = await getDb()
     .insert(accounts)
     .values({
@@ -96,6 +100,8 @@ export async function createAccount(userId: string, input: AccountInput) {
       institution: input.institution ?? null,
       closingDay:
         input.type === "credit_card" ? (input.closingDay ?? null) : null,
+      acquisitionCostCents: valued ? (input.acquisitionCostCents ?? null) : null,
+      acquisitionDate: valued ? (input.acquisitionDate ?? null) : null,
     })
     .returning();
   return rows[0];
@@ -107,6 +113,7 @@ export async function updateAccount(
   input: AccountInput,
 ) {
   const uid = requireUserId(userId);
+  const valued = isValuedAccountType(input.type);
   const rows = await getDb()
     .update(accounts)
     .set({
@@ -117,6 +124,8 @@ export async function updateAccount(
       institution: input.institution ?? null,
       closingDay:
         input.type === "credit_card" ? (input.closingDay ?? null) : null,
+      acquisitionCostCents: valued ? (input.acquisitionCostCents ?? null) : null,
+      acquisitionDate: valued ? (input.acquisitionDate ?? null) : null,
     })
     .where(and(eq(accounts.userId, uid), eq(accounts.id, accountId)))
     .returning();

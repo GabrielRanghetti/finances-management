@@ -22,6 +22,11 @@ import {
   listInstallmentGroup,
   listTransactions,
 } from "./transactions";
+import {
+  createValuation,
+  getValuation,
+  listValuations,
+} from "./valuations";
 
 beforeAll(async () => {
   const db = getDb();
@@ -196,5 +201,35 @@ describe("user data isolation", () => {
     });
     expect(await listLoanTerms(userA.id)).toHaveLength(1);
     expect(await getLoanTerms(userA.id, loanB.id)).toBeNull();
+
+    const propA = await createAccount(userA.id, {
+      name: "Imóvel A",
+      type: "property",
+      currency: "BRL",
+      entityId: entityA.id,
+      acquisitionCostCents: 100_000,
+      acquisitionDate: "2020-01-01",
+    });
+    const propB = await createAccount(userB.id, {
+      name: "Imóvel B",
+      type: "property",
+      currency: "BRL",
+      entityId: entityB.id,
+      acquisitionCostCents: 200_000,
+      acquisitionDate: "2020-01-01",
+    });
+    const valA = await createValuation(userA.id, {
+      accountId: propA.id,
+      date: "2026-01-01",
+      valueCents: 120_000,
+    });
+    const valB = await createValuation(userB.id, {
+      accountId: propB.id,
+      date: "2026-01-01",
+      valueCents: 220_000,
+    });
+    expect(await listValuations(userA.id)).toHaveLength(1);
+    expect(await getValuation(userA.id, valB!.id)).toBeNull();
+    expect(await getValuation(userA.id, valA!.id)).not.toBeNull();
   });
 });

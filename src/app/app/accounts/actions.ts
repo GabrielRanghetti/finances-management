@@ -11,8 +11,14 @@ import {
 import { getEntity } from "@/db/entities";
 import { createLoanWithTerms, recordLoanPayment } from "@/db/loans";
 import { accountTypes, type AccountType } from "@/db/schema";
+import {
+  createValuation,
+  deleteValuation,
+  updateValuation,
+} from "@/db/valuations";
 import { loanSystems, type LoanSystem } from "@/domain/loans";
 import { parseBrlToCents } from "@/domain/money";
+import { isValuedAccountType } from "@/domain/valuations";
 import { auth } from "@/lib/auth";
 import { messages } from "@/messages/pt-BR";
 
@@ -59,6 +65,25 @@ function parseAccountInput(formData: FormData) {
     closingDay = parsed;
   }
 
+  let acquisitionCostCents: number | null = null;
+  let acquisitionDate: string | null = null;
+  if (isValuedAccountType(type)) {
+    const costRaw = String(formData.get("acquisitionCost") ?? "").trim();
+    const dateRaw = String(formData.get("acquisitionDate") ?? "").trim();
+    if (!costRaw || !dateRaw) {
+      return { error: messages.accounts.errorGeneric };
+    }
+    try {
+      acquisitionCostCents = parseBrlToCents(costRaw);
+    } catch {
+      return { error: messages.transactions.errorAmount };
+    }
+    if (acquisitionCostCents < 0) {
+      return { error: messages.transactions.errorAmount };
+    }
+    acquisitionDate = dateRaw;
+  }
+
   return {
     input: {
       name,
@@ -67,6 +92,8 @@ function parseAccountInput(formData: FormData) {
       entityId,
       institution: institution || null,
       closingDay,
+      acquisitionCostCents,
+      acquisitionDate,
     },
   };
 }
@@ -202,6 +229,90 @@ export async function archiveAccountAction(accountId: string) {
 
   await archiveAccount(session.user.id, accountId);
   redirect("/app/accounts");
+}
+
+function parseValuationInput(formData: FormData, accountId: string) {
+  const date = String(formData.get("date") ?? "").trim();
+  const valueRaw = String(formData.get("value") ?? "").trim();
+  if (!date || !valueRaw) {
+    return { error: messages.accounts.errorValuation };
+  }
+  let valueCents: number;
+  try {
+    valueCents = parseBrlToCents(valueRaw);
+  } catch {
+    return { error: messages.transactions.errorAmount };
+  }
+  if (valueCents < 0) {
+    return { error: messages.transactions.errorAmount };
+  }
+  return { input: { accountId, date, valueCents } };
+}
+
+export async function createValuationAction(
+  accountId: string,
+  _prev: { error?: string } | undefined,
+  formData: FormData,
+) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session) {
+    redirect("/sign-in");
+  }
+
+  const parsed = parseValuationInput(formData, accountId);
+  if ("error" in parsed && parsed.error) {
+    return { error: parsed.error };
+  }
+  const created = await createValuation(session.user.id, parsed.input!);
+  if (!created) {
+    return { error: messages.accounts.errorValuation };
+  }
+  redirect(`/app/accounts/${accountId}`);
+}
+
+export async function updateValuationAction(
+  accountId: string,
+  valuationId: string,
+  _prev: { error?: string } | undefined,
+  formData: FormData,
+) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session) {
+    redirect("/sign-in");
+  }
+
+  const parsed = parseValuationInput(formData, accountId);
+  if ("error" in parsed && parsed.error) {
+    return { error: parsed.error };
+  }
+  const updated = await updateValuation(
+    session.user.id,
+    valuationId,
+    parsed.input!,
+  );
+  if (!updated) {
+    return { error: messages.accounts.errorValuationNotFound };
+  }
+  redirect(`/app/accounts/${accountId}`);
+}
+
+export async function deleteValuationAction(
+  accountId: string,
+  valuationId: string,
+) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session) {
+    redirect("/sign-in");
+  }
+
+  await deleteValuation(session.user.id, valuationId);
+  redirect(`/app/accounts/${accountId}`);
 }
 
 export async function recordLoanPaymentAction(

@@ -5,6 +5,8 @@ import Link from "next/link";
 
 import type { AccountType } from "@/db/schema";
 import { accountTypes } from "@/db/schema";
+import { formatCentsToBrl } from "@/domain/money";
+import { isValuedAccountType } from "@/domain/valuations";
 import { messages } from "@/messages/pt-BR";
 
 type AccountFormState = { error?: string } | undefined;
@@ -24,6 +26,8 @@ type Props = {
     entityId: string;
     institution: string | null;
     closingDay: number | null;
+    acquisitionCostCents: number | null;
+    acquisitionDate: string | null;
   };
 };
 
@@ -88,6 +92,38 @@ export function AccountForm({ action, entities, defaults }: Props) {
             defaultValue={defaults?.closingDay ?? 10}
           />
         </label>
+      ) : null}
+      {isValuedAccountType(type) ? (
+        <>
+          <label className="flex flex-col gap-1 text-sm">
+            {messages.accounts.acquisitionCost}
+            <input
+              className="rounded border px-3 py-2"
+              name="acquisitionCost"
+              required
+              placeholder={messages.transactions.amountPlaceholder}
+              inputMode="decimal"
+              defaultValue={
+                defaults?.acquisitionCostCents != null
+                  ? formatCentsToBrl(defaults.acquisitionCostCents)
+                  : ""
+              }
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            {messages.accounts.acquisitionDate}
+            <input
+              className="rounded border px-3 py-2"
+              name="acquisitionDate"
+              type="date"
+              required
+              defaultValue={
+                defaults?.acquisitionDate ??
+                new Date().toISOString().slice(0, 10)
+              }
+            />
+          </label>
+        </>
       ) : null}
       {type === "loan" && !defaults ? (
         <>

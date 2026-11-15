@@ -79,6 +79,9 @@ export const accounts = pgTable("accounts", {
   institution: text("institution"),
   /** Day of month when a credit card statement closes (1–31). */
   closingDay: integer("closing_day"),
+  /** Acquisition cost for property, vehicle and other (tax / history). */
+  acquisitionCostCents: bigint("acquisition_cost_cents", { mode: "number" }),
+  acquisitionDate: date("acquisition_date"),
   archived: boolean("archived").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
@@ -157,3 +160,18 @@ export const loanTerms = pgTable(
     uniqueIndex("loan_terms_account_id_uidx").on(table.accountId),
   ],
 );
+
+export const valuations = pgTable("valuations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  accountId: uuid("account_id")
+    .notNull()
+    .references(() => accounts.id, { onDelete: "cascade" }),
+  date: date("date").notNull(),
+  valueCents: bigint("value_cents", { mode: "number" }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});

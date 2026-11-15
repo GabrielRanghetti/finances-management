@@ -14,12 +14,15 @@ import {
   listAccountAmounts,
   listTransactions,
 } from "@/db/transactions";
+import { listValuations } from "@/db/valuations";
 import type { AccountType } from "@/db/schema";
 import {
   statementPeriodContaining,
   statementTotalCents,
 } from "@/domain/installments";
 import { accountBalanceCents, formatCentsToBrl } from "@/domain/money";
+import { accountBalanceOnDate } from "@/domain/networth";
+import { isValuedAccountType } from "@/domain/valuations";
 import { auth } from "@/lib/auth";
 import { messages } from "@/messages/pt-BR";
 
@@ -51,12 +54,22 @@ export default async function AccountDetailPage({
   }
 
   const amounts = (await listAccountAmounts(session.user.id, account.id)) ?? [];
-  const balanceCents = accountBalanceCents(amounts);
+  const today = new Date().toISOString().slice(0, 10);
+  const valuationRows = isValuedAccountType(account.type)
+    ? await listValuations(session.user.id, account.id)
+    : [];
+  const balanceCents = accountBalanceOnDate(
+    {
+      type: account.type,
+      transactionBalanceCents: accountBalanceCents(amounts),
+      acquisitionCostCents: account.acquisitionCostCents,
+      valuations: valuationRows,
+    },
+    today,
+  );
   const archive = archiveAccountAction.bind(null, account.id);
   const typeLabel =
     messages.accounts.types[account.type as AccountType] ?? account.type;
-
-  const today = new Date().toISOString().slice(0, 10);
   const statementDate = query.statementDate || today;
   const statement =
     account.type === "credit_card" && account.closingDay
@@ -121,6 +134,32 @@ export default async function AccountDetailPage({
             <dt className="font-medium">{messages.accounts.closingDay}</dt>
             <dd>{account.closingDay ?? messages.emptyValue}</dd>
           </div>
+        ) : null}
+        {isValuedAccountType(account.type) ? (
+          <>
+            <div>
+              <dt className="font-medium">
+                {messages.accounts.acquisitionCost}
+              </dt>
+              <dd>
+                {account.acquisitionCostCents != null
+                  ? messages.money(
+                      formatCentsToBrl(account.acquisitionCostCents),
+                    )
+                  : messages.emptyValue}
+              </dd>
+            </div>
+            <div>
+              <dt className="font-medium">
+                {messages.accounts.acquisitionDate}
+              </dt>
+              <dd>{account.acquisitionDate || messages.emptyValue}</dd>
+            </div>
+            <div>
+              <dt className="font-medium">{messages.accounts.currentValue}</dt>
+              <dd>{messages.money(formatCentsToBrl(balanceCents))}</dd>
+            </div>
+          </>
         ) : null}
         <div>
           <dt className="font-medium">{messages.accounts.entity}</dt>
@@ -188,6 +227,45 @@ export default async function AccountDetailPage({
                     href={`/app/transactions/${row.id}/edit`}
                   >
                     {messages.transactions.edit}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : null}
+
+      {isValuedAccountType(account.type) ? (
+        <section className="flex flex-col gap-3 border-t pt-4">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-xl font-semibold">
+              {messages.accounts.valuations}
+            </h2>
+            <Link
+              className="underline text-sm"
+              href={`/app/accounts/${account.id}/valuations/new`}
+            >
+              {messages.accounts.valuationCreate}
+            </Link>
+          </div>
+          {valuationRows.length === 0 ? (
+            <p className="text-sm">{messages.accounts.valuationEmpty}</p>
+          ) : (
+            <ul className="flex flex-col gap-2 text-sm">
+              {valuationRows.map((row) => (
+                <li
+                  key={row.id}
+                  className="flex flex-wrap gap-x-3 border-b py-2"
+                >
+                  <span>{row.date}</span>
+                  <span>
+                    {messages.money(formatCentsToBrl(row.valueCents))}
+                  </span>
+                  <Link
+                    className="underline"
+                    href={`/app/accounts/${account.id}/valuations/${row.id}/edit`}
+                  >
+                    {messages.accounts.edit}
                   </Link>
                 </li>
               ))}

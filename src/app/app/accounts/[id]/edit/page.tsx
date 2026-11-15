@@ -46,6 +46,8 @@ export default async function EditAccountPage({ params }: Props) {
           entityId: account.entityId,
           institution: account.institution,
           closingDay: account.closingDay,
+          acquisitionCostCents: account.acquisitionCostCents,
+          acquisitionDate: account.acquisitionDate,
         }}
       />
     </main>

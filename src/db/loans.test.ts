@@ -100,10 +100,19 @@ describe("loans ledger", () => {
     const bankAmounts = (await listAccountAmounts(owner.id, bank.id)) ?? [];
     const loanAmounts = amounts;
     expect(
-      netWorthCents([
-        accountBalanceCents(bankAmounts),
-        accountBalanceCents(loanAmounts),
-      ]),
+      netWorthCents(
+        [
+          {
+            type: "bank",
+            transactionBalanceCents: accountBalanceCents(bankAmounts),
+          },
+          {
+            type: "loan",
+            transactionBalanceCents: accountBalanceCents(loanAmounts),
+          },
+        ],
+        "2026-12-31",
+      ),
     ).toBe(accountBalanceCents(bankAmounts));
   });
 

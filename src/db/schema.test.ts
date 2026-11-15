@@ -6,6 +6,7 @@ import {
   entities,
   loanTerms,
   transactions,
+  valuations,
 } from "./schema";
 
 test("accounts table carries user_id and no float money columns", () => {
@@ -20,6 +21,8 @@ test("accounts table carries user_id and no float money columns", () => {
       "currency",
       "institution",
       "closingDay",
+      "acquisitionCostCents",
+      "acquisitionDate",
       "archived",
       "createdAt",
     ]),
@@ -50,4 +53,9 @@ test("loan_terms stores principal as cents and rate as numeric", () => {
   expect(loanTerms.userId.name).toBe("user_id");
   expect(loanTerms.principalCents.name).toBe("principal_cents");
   expect(loanTerms.monthlyInterestRate.name).toBe("monthly_interest_rate");
+});
+
+test("valuations store value as integer cents", () => {
+  expect(valuations.userId.name).toBe("user_id");
+  expect(valuations.valueCents.name).toBe("value_cents");
 });
