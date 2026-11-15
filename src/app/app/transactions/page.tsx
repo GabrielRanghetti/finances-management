@@ -191,6 +191,9 @@ export default async function TransactionsListPage({ searchParams }: Props) {
                   ? categoryName.get(row.categoryId) ?? ""
                   : ""}
               </span>
+              <Link className="underline" href={`/app/transactions/${row.id}/edit`}>
+                {messages.transactions.edit}
+              </Link>
             </li>
           ))}
         </ul>

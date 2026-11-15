@@ -35,6 +35,7 @@ vi.mock("@/lib/auth", () => ({
   },
 }));
 
+import EditTransactionPage from "./[id]/edit/page";
 import TransactionsListPage from "./page";
 import { createAccount } from "@/db/accounts";
 import { getDb } from "@/db/index";
@@ -113,5 +114,18 @@ describe("transactions route isolation", () => {
     );
     expect(listHtmlB).toContain("Receita B");
     expect(listHtmlB).not.toContain("Receita A");
+
+    getSession.mockResolvedValue(asSession(userA));
+    const editOwn = renderToStaticMarkup(
+      await EditTransactionPage({ params: Promise.resolve({ id: txA!.id }) }),
+    );
+    expect(editOwn).toContain("Receita A");
+
+    notFound.mockClear();
+    getSession.mockResolvedValue(asSession(userA));
+    await expect(
+      EditTransactionPage({ params: Promise.resolve({ id: txB!.id }) }),
+    ).rejects.toThrow("NEXT_NOT_FOUND");
+    expect(notFound).toHaveBeenCalledOnce();
   });
 });
