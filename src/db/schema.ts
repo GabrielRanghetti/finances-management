@@ -4,6 +4,7 @@
  * - Quantities and prices: numeric
  * - Never use floating-point types for money
  */
+import { sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
@@ -40,18 +41,27 @@ export type CategoryKind = (typeof categoryKinds)[number];
 export const transactionSources = ["manual"] as const;
 export type TransactionSource = (typeof transactionSources)[number];
 
-export const entities = pgTable("entities", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  type: text("type").notNull(),
-  name: text("name").notNull(),
-  documentNumber: text("document_number"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const entities = pgTable(
+  "entities",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    name: text("name").notNull(),
+    documentNumber: text("document_number"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    // One auto-created default PF per user under concurrent ensureDefaultPfEntity.
+    uniqueIndex("entities_user_default_pf_uidx")
+      .on(table.userId)
+      .where(sql`${table.type} = 'pf' AND ${table.name} = 'Pessoa física'`),
+  ],
+);
 
 export const accounts = pgTable("accounts", {
   id: uuid("id").primaryKey().defaultRandom(),
