@@ -3,7 +3,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { listAccountsWithEntities } from "@/db/accounts";
-import { ensureDefaultPfEntity } from "@/db/entities";
 import type { EntityType } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { messages } from "@/messages/pt-BR";
@@ -29,8 +28,6 @@ export default async function AccountsListPage({ searchParams }: Props) {
   if (!session) {
     redirect("/sign-in");
   }
-
-  await ensureDefaultPfEntity(session.user.id);
 
   const params = await searchParams;
   const entityFilter = parseEntityFilter(params.entity);

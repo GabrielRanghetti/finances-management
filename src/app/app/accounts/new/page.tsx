@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 import { createAccountAction } from "../actions";
 import { AccountForm } from "../account-form";
-import { ensureDefaultPfEntity, listEntities } from "@/db/entities";
+import { listEntities } from "@/db/entities";
 import { auth } from "@/lib/auth";
 import { messages } from "@/messages/pt-BR";
 
@@ -18,7 +18,6 @@ export default async function NewAccountPage() {
     redirect("/sign-in");
   }
 
-  await ensureDefaultPfEntity(session.user.id);
   const entities = await listEntities(session.user.id);
 
   return (
