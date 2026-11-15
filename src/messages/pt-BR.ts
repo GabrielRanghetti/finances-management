@@ -3,6 +3,7 @@ export const messages = {
   appDescription: "Gestão pessoal de finanças e patrimônio",
   nav: {
     dashboard: "Painel",
+    entities: "Entidades",
     accounts: "Contas",
     investments: "Investimentos",
     budget: "Orçamento",
@@ -44,6 +45,22 @@ export const messages = {
   appHome: {
     title: "Área logada",
     greeting: (name: string) => `Olá, ${name}.`,
+  },
+  entities: {
+    title: "Entidades",
+    empty: "Nenhuma entidade.",
+    create: "Nova entidade",
+    edit: "Editar entidade",
+    name: "Nome",
+    type: "Tipo",
+    documentNumber: "CPF/CNPJ",
+    typePf: "Pessoa física",
+    typePj: "Pessoa jurídica",
+    save: "Salvar",
+    cancel: "Cancelar",
+    linkLabel: (name: string, type: string) => `${name} (${type})`,
+    errorGeneric: "Não foi possível salvar a entidade",
+    errorNotFound: "Entidade não encontrada",
   },
   accounts: {
     title: "Contas",

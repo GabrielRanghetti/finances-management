@@ -2,6 +2,11 @@ import { migrate } from "drizzle-orm/pglite/migrator";
 import { beforeAll, describe, expect, test } from "vitest";
 
 import { createAccount, getAccount, listAccounts } from "./accounts";
+import {
+  createEntity,
+  getEntity,
+  listEntities,
+} from "./entities";
 import { getDb } from "./index";
 import { user } from "./schema";
 
@@ -28,15 +33,26 @@ describe("user data isolation", () => {
     const userA = await createUser("user-a", "a@example.com");
     const userB = await createUser("user-b", "b@example.com");
 
+    const entityA = await createEntity(userA.id, {
+      type: "pj",
+      name: "Empresa A",
+    });
+    const entityB = await createEntity(userB.id, {
+      type: "pj",
+      name: "Empresa B",
+    });
+
     const accountA = await createAccount(userA.id, {
       name: "Conta A",
       type: "bank",
       currency: "BRL",
+      entityId: entityA.id,
     });
     const accountB = await createAccount(userB.id, {
       name: "Conta B",
       type: "bank",
       currency: "BRL",
+      entityId: entityB.id,
     });
 
     // List route: src/app/app/accounts/page.tsx → listAccounts(session.user.id)
@@ -55,5 +71,16 @@ describe("user data isolation", () => {
     // User A must not find user B's account (page calls notFound())
     const detailCross = await getAccount(userA.id, accountB.id);
     expect(detailCross).toBeNull();
+
+    // Entities list/detail
+    const entitiesA = await listEntities(userA.id);
+    const entitiesB = await listEntities(userB.id);
+    expect(entitiesA.map((row) => row.id)).toContain(entityA.id);
+    expect(entitiesA.map((row) => row.id)).not.toContain(entityB.id);
+    expect(entitiesB.map((row) => row.id)).toContain(entityB.id);
+    expect(entitiesB.map((row) => row.id)).not.toContain(entityA.id);
+
+    expect(await getEntity(userA.id, entityA.id)).not.toBeNull();
+    expect(await getEntity(userA.id, entityB.id)).toBeNull();
   });
 });
