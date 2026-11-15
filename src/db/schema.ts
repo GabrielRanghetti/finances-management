@@ -4,7 +4,7 @@
  * - Quantities and prices: numeric
  * - Never use floating-point types for money
  */
-import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 import { user } from "./auth-schema";
 
@@ -12,6 +12,18 @@ export * from "./auth-schema";
 
 export const entityTypes = ["pf", "pj"] as const;
 export type EntityType = (typeof entityTypes)[number];
+
+export const accountTypes = [
+  "bank",
+  "cash",
+  "credit_card",
+  "brokerage",
+  "loan",
+  "property",
+  "vehicle",
+  "other",
+] as const;
+export type AccountType = (typeof accountTypes)[number];
 
 export const entities = pgTable("entities", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -37,6 +49,8 @@ export const accounts = pgTable("accounts", {
   name: text("name").notNull(),
   type: text("type").notNull(),
   currency: text("currency").notNull(),
+  institution: text("institution"),
+  archived: boolean("archived").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
