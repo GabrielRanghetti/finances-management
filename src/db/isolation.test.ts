@@ -10,6 +10,11 @@ import {
 import { getDb } from "./index";
 import { user } from "./schema";
 import {
+  createLoanWithTerms,
+  getLoanTerms,
+  listLoanTerms,
+} from "./loans";
+import {
   cancelInstallmentGroup,
   createInstallmentPurchase,
   createTransaction,
@@ -160,5 +165,36 @@ describe("user data isolation", () => {
     expect(
       await listInstallmentGroup(userB.id, installmentsB!.installmentGroupId),
     ).toHaveLength(2);
+
+    const loanA = await createAccount(userA.id, {
+      name: "Empréstimo A",
+      type: "loan",
+      currency: "BRL",
+      entityId: entityA.id,
+    });
+    const loanB = await createAccount(userB.id, {
+      name: "Empréstimo B",
+      type: "loan",
+      currency: "BRL",
+      entityId: entityB.id,
+    });
+    await createLoanWithTerms(userA.id, {
+      accountId: loanA.id,
+      principalCents: 50_000,
+      monthlyInterestRate: 0.01,
+      termMonths: 2,
+      firstPaymentDate: "2026-05-01",
+      system: "sac",
+    });
+    await createLoanWithTerms(userB.id, {
+      accountId: loanB.id,
+      principalCents: 60_000,
+      monthlyInterestRate: 0.01,
+      termMonths: 2,
+      firstPaymentDate: "2026-05-01",
+      system: "price",
+    });
+    expect(await listLoanTerms(userA.id)).toHaveLength(1);
+    expect(await getLoanTerms(userA.id, loanB.id)).toBeNull();
   });
 });

@@ -2,8 +2,14 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
-import { archiveAccountAction } from "../actions";
-import { getAccountWithEntity } from "@/db/accounts";
+import { archiveAccountAction, recordLoanPaymentAction } from "../actions";
+import { LoanPaymentForm } from "../loan-payment-form";
+import { getAccountWithEntity, listAccounts } from "@/db/accounts";
+import {
+  countPaidInstallments,
+  getLoanTerms,
+  scheduleForTerms,
+} from "@/db/loans";
 import {
   listAccountAmounts,
   listTransactions,
@@ -66,6 +72,24 @@ export default async function AccountDetailPage({
   const statementTotal = statement
     ? statementTotalCents(statementRows.map((row) => row.amountCents))
     : 0;
+
+  const loanTerms =
+    account.type === "loan"
+      ? await getLoanTerms(session.user.id, account.id)
+      : null;
+  const schedule = loanTerms ? scheduleForTerms(loanTerms) : [];
+  const paidCount = loanTerms
+    ? await countPaidInstallments(session.user.id, account.id)
+    : 0;
+  const nextInstallment = paidCount + 1;
+  const paymentAccounts = loanTerms
+    ? (await listAccounts(session.user.id)).filter(
+        (row) =>
+          row.id !== account.id &&
+          (row.type === "bank" || row.type === "cash"),
+      )
+    : [];
+  const recordPayment = recordLoanPaymentAction.bind(null, account.id);
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 p-6">
@@ -133,7 +157,7 @@ export default async function AccountDetailPage({
             <label className="flex flex-col gap-1">
               {messages.accounts.statementDate}
               <input
-                className="rounded border px-2 py-1"
+                className="rounded border px-3 py-2"
                 type="date"
                 name="statementDate"
                 defaultValue={statementDate}
@@ -168,6 +192,86 @@ export default async function AccountDetailPage({
                 </li>
               ))}
             </ul>
+          )}
+        </section>
+      ) : null}
+
+      {loanTerms ? (
+        <section className="flex flex-col gap-3 border-t pt-4">
+          <h2 className="text-xl font-semibold">
+            {messages.accounts.loanSchedule}
+          </h2>
+          <dl className="grid gap-1 text-sm">
+            <div>
+              <dt className="inline font-medium">
+                {messages.accounts.loanPrincipal}:{" "}
+              </dt>
+              <dd className="inline">
+                {messages.money(formatCentsToBrl(loanTerms.principalCents))}
+              </dd>
+            </div>
+            <div>
+              <dt className="inline font-medium">
+                {messages.accounts.loanSystem}:{" "}
+              </dt>
+              <dd className="inline">
+                {loanTerms.system === "sac"
+                  ? messages.accounts.loanSystemSac
+                  : messages.accounts.loanSystemPrice}
+              </dd>
+            </div>
+          </dl>
+          <div className="overflow-x-auto text-sm">
+            <table className="w-full border-collapse text-left">
+              <thead>
+                <tr className="border-b">
+                  <th className="py-1 pr-2">{messages.accounts.loanInstallment}</th>
+                  <th className="py-1 pr-2">{messages.transactions.date}</th>
+                  <th className="py-1 pr-2">{messages.accounts.loanPayment}</th>
+                  <th className="py-1 pr-2">{messages.accounts.loanInterest}</th>
+                  <th className="py-1 pr-2">
+                    {messages.accounts.loanAmortization}
+                  </th>
+                  <th className="py-1">{messages.accounts.loanOutstanding}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {schedule.map((line) => (
+                  <tr key={line.installment} className="border-b">
+                    <td className="py-1 pr-2">{line.installment}</td>
+                    <td className="py-1 pr-2">{line.date}</td>
+                    <td className="py-1 pr-2">
+                      {messages.money(formatCentsToBrl(line.paymentCents))}
+                    </td>
+                    <td className="py-1 pr-2">
+                      {messages.money(formatCentsToBrl(line.interestCents))}
+                    </td>
+                    <td className="py-1 pr-2">
+                      {messages.money(
+                        formatCentsToBrl(line.amortizationCents),
+                      )}
+                    </td>
+                    <td className="py-1">
+                      {messages.money(
+                        formatCentsToBrl(line.outstandingCents),
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {nextInstallment > loanTerms.termMonths ? (
+            <p className="text-sm">{messages.accounts.loanPaid}</p>
+          ) : paymentAccounts.length > 0 ? (
+            <LoanPaymentForm
+              action={recordPayment}
+              installment={nextInstallment}
+              termMonths={loanTerms.termMonths}
+              paymentAccounts={paymentAccounts}
+            />
+          ) : (
+            <p className="text-sm">{messages.accounts.errorLoanPayment}</p>
           )}
         </section>
       ) : null}

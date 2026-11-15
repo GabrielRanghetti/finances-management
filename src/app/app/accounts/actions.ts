@@ -9,9 +9,24 @@ import {
   updateAccount,
 } from "@/db/accounts";
 import { getEntity } from "@/db/entities";
+import { createLoanWithTerms, recordLoanPayment } from "@/db/loans";
 import { accountTypes, type AccountType } from "@/db/schema";
+import { loanSystems, type LoanSystem } from "@/domain/loans";
+import { parseBrlToCents } from "@/domain/money";
 import { auth } from "@/lib/auth";
 import { messages } from "@/messages/pt-BR";
+
+function parseMonthlyRatePercent(input: string): number {
+  const normalized = input.trim().replace(/\./g, "").replace(",", ".");
+  if (!normalized || !/^\d+(\.\d+)?$/.test(normalized)) {
+    throw new Error("invalid");
+  }
+  const value = Number(normalized);
+  if (!Number.isFinite(value) || value < 0) {
+    throw new Error("invalid");
+  }
+  return value / 100;
+}
 
 function parseAccountInput(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
@@ -56,6 +71,53 @@ function parseAccountInput(formData: FormData) {
   };
 }
 
+function parseLoanTerms(formData: FormData) {
+  const principalRaw = String(formData.get("principal") ?? "").trim();
+  const rateRaw = String(formData.get("monthlyRate") ?? "").trim();
+  const termRaw = String(formData.get("termMonths") ?? "").trim();
+  const firstPaymentDate = String(formData.get("firstPaymentDate") ?? "").trim();
+  const system = String(formData.get("loanSystem") ?? "").trim();
+
+  if (!principalRaw || !rateRaw || !termRaw || !firstPaymentDate) {
+    return { error: messages.accounts.errorLoanTerms };
+  }
+  if (!loanSystems.includes(system as LoanSystem)) {
+    return { error: messages.accounts.errorLoanTerms };
+  }
+
+  let principalCents: number;
+  try {
+    principalCents = parseBrlToCents(principalRaw);
+  } catch {
+    return { error: messages.transactions.errorAmount };
+  }
+  if (principalCents <= 0) {
+    return { error: messages.transactions.errorAmount };
+  }
+
+  let monthlyInterestRate: number;
+  try {
+    monthlyInterestRate = parseMonthlyRatePercent(rateRaw);
+  } catch {
+    return { error: messages.accounts.errorLoanRate };
+  }
+
+  const termMonths = Number(termRaw);
+  if (!Number.isInteger(termMonths) || termMonths < 1) {
+    return { error: messages.accounts.errorLoanTerms };
+  }
+
+  return {
+    terms: {
+      principalCents,
+      monthlyInterestRate,
+      termMonths,
+      firstPaymentDate,
+      system: system as LoanSystem,
+    },
+  };
+}
+
 export async function createAccountAction(
   _prev: { error?: string } | undefined,
   formData: FormData,
@@ -75,6 +137,22 @@ export async function createAccountAction(
   const entity = await getEntity(session.user.id, parsed.input!.entityId!);
   if (!entity) {
     return { error: messages.accounts.errorGeneric };
+  }
+
+  if (parsed.input!.type === "loan") {
+    const loan = parseLoanTerms(formData);
+    if ("error" in loan && loan.error) {
+      return { error: loan.error };
+    }
+    const account = await createAccount(session.user.id, parsed.input!);
+    const created = await createLoanWithTerms(session.user.id, {
+      accountId: account.id,
+      ...loan.terms!,
+    });
+    if (!created) {
+      return { error: messages.accounts.errorGeneric };
+    }
+    redirect(`/app/accounts/${account.id}`);
   }
 
   await createAccount(session.user.id, parsed.input!);
@@ -124,4 +202,33 @@ export async function archiveAccountAction(accountId: string) {
 
   await archiveAccount(session.user.id, accountId);
   redirect("/app/accounts");
+}
+
+export async function recordLoanPaymentAction(
+  loanAccountId: string,
+  _prev: { error?: string } | undefined,
+  formData: FormData,
+) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session) {
+    redirect("/sign-in");
+  }
+
+  const fromAccountId = String(formData.get("fromAccountId") ?? "").trim();
+  const installment = Number(String(formData.get("installment") ?? "").trim());
+  if (!fromAccountId || !Number.isInteger(installment) || installment < 1) {
+    return { error: messages.accounts.errorLoanPayment };
+  }
+
+  const recorded = await recordLoanPayment(session.user.id, {
+    loanAccountId,
+    fromAccountId,
+    installment,
+  });
+  if (!recorded) {
+    return { error: messages.accounts.errorLoanPayment };
+  }
+  redirect(`/app/accounts/${loanAccountId}`);
 }

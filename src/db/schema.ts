@@ -10,6 +10,7 @@ import {
   boolean,
   date,
   integer,
+  numeric,
   pgTable,
   text,
   timestamp,
@@ -127,5 +128,32 @@ export const transactions = pgTable(
       table.accountId,
       table.externalId,
     ),
+  ],
+);
+
+export const loanTerms = pgTable(
+  "loan_terms",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    principalCents: bigint("principal_cents", { mode: "number" }).notNull(),
+    monthlyInterestRate: numeric("monthly_interest_rate", {
+      precision: 12,
+      scale: 8,
+    }).notNull(),
+    termMonths: integer("term_months").notNull(),
+    firstPaymentDate: date("first_payment_date").notNull(),
+    system: text("system").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("loan_terms_account_id_uidx").on(table.accountId),
   ],
 );

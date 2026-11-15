@@ -89,6 +89,64 @@ export function AccountForm({ action, entities, defaults }: Props) {
           />
         </label>
       ) : null}
+      {type === "loan" && !defaults ? (
+        <>
+          <label className="flex flex-col gap-1 text-sm">
+            {messages.accounts.loanPrincipal}
+            <input
+              className="rounded border px-3 py-2"
+              name="principal"
+              required
+              placeholder={messages.transactions.amountPlaceholder}
+              inputMode="decimal"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            {messages.accounts.loanRate}
+            <input
+              className="rounded border px-3 py-2"
+              name="monthlyRate"
+              required
+              placeholder={messages.accounts.loanRatePlaceholder}
+              inputMode="decimal"
+              defaultValue="1,00"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            {messages.accounts.loanTermMonths}
+            <input
+              className="rounded border px-3 py-2"
+              name="termMonths"
+              type="number"
+              min={1}
+              required
+              defaultValue={12}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            {messages.accounts.loanFirstPayment}
+            <input
+              className="rounded border px-3 py-2"
+              name="firstPaymentDate"
+              type="date"
+              required
+              defaultValue={new Date().toISOString().slice(0, 10)}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            {messages.accounts.loanSystem}
+            <select
+              className="rounded border px-3 py-2"
+              name="loanSystem"
+              required
+              defaultValue="price"
+            >
+              <option value="price">{messages.accounts.loanSystemPrice}</option>
+              <option value="sac">{messages.accounts.loanSystemSac}</option>
+            </select>
+          </label>
+        </>
+      ) : null}
       <label className="flex flex-col gap-1 text-sm">
         {messages.accounts.entity}
         <select
