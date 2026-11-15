@@ -83,12 +83,16 @@ describe("accounts route isolation", () => {
     });
 
     getSession.mockResolvedValue(asSession(userA));
-    const listHtmlA = renderToStaticMarkup(await AccountsListPage());
+    const listHtmlA = renderToStaticMarkup(
+      await AccountsListPage({ searchParams: Promise.resolve({}) }),
+    );
     expect(listHtmlA).toContain("Conta A (BRL)");
     expect(listHtmlA).not.toContain("Conta B");
 
     getSession.mockResolvedValue(asSession(userB));
-    const listHtmlB = renderToStaticMarkup(await AccountsListPage());
+    const listHtmlB = renderToStaticMarkup(
+      await AccountsListPage({ searchParams: Promise.resolve({}) }),
+    );
     expect(listHtmlB).toContain("Conta B (BRL)");
     expect(listHtmlB).not.toContain("Conta A");
 

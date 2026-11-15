@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "entities_user_default_pf_uidx" ON "entities" USING btree ("user_id") WHERE "entities"."type" = 'pf' AND "entities"."name" = 'Pessoa física';

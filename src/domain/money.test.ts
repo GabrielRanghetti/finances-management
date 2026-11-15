@@ -1,0 +1,63 @@
+import { describe, expect, test } from "vitest";
+
+import {
+  accountBalanceCents,
+  formatCentsToBrl,
+  incomeExpenseTotals,
+  parseBrlToCents,
+  totalsByCategory,
+} from "./money";
+
+describe("parseBrlToCents", () => {
+  test("parses Brazilian thousand and decimal separators", () => {
+    expect(parseBrlToCents("1.234,56")).toBe(123456);
+    expect(parseBrlToCents("10,00")).toBe(1000);
+    expect(parseBrlToCents("0,50")).toBe(50);
+    expect(parseBrlToCents("100")).toBe(10000);
+  });
+
+  test("parses negatives", () => {
+    expect(parseBrlToCents("-1.234,56")).toBe(-123456);
+  });
+
+  test("rejects invalid input", () => {
+    expect(() => parseBrlToCents("")).toThrow();
+    expect(() => parseBrlToCents("abc")).toThrow();
+    expect(() => parseBrlToCents("1.234.56")).toThrow();
+  });
+});
+
+describe("formatCentsToBrl", () => {
+  test("formats cents", () => {
+    expect(formatCentsToBrl(123456)).toBe("1.234,56");
+    expect(formatCentsToBrl(-50)).toBe("-0,50");
+  });
+});
+
+describe("ledger aggregates", () => {
+  test("balance is the sum of amounts", () => {
+    expect(accountBalanceCents([1000, -250, 50])).toBe(800);
+  });
+
+  test("transfers are excluded from income and expense totals", () => {
+    const totals = incomeExpenseTotals([
+      { amountCents: 5000, categoryId: "sal", transferId: null },
+      { amountCents: -1200, categoryId: "food", transferId: null },
+      { amountCents: -3000, categoryId: "prolabore", transferId: "t1" },
+      { amountCents: 3000, categoryId: "prolabore", transferId: "t1" },
+    ]);
+    expect(totals.incomeCents).toBe(5000);
+    expect(totals.expenseCents).toBe(-1200);
+  });
+
+  test("totals by category match non-transfer entries", () => {
+    const totals = totalsByCategory([
+      { amountCents: 5000, categoryId: "sal", transferId: null },
+      { amountCents: -700, categoryId: "food", transferId: null },
+      { amountCents: -500, categoryId: "food", transferId: null },
+      { amountCents: -100, categoryId: "food", transferId: "t1" },
+    ]);
+    expect(totals.get("sal")).toBe(5000);
+    expect(totals.get("food")).toBe(-1200);
+  });
+});

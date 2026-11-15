@@ -5,6 +5,7 @@ import { nextCookies } from "better-auth/next-js";
 import { twoFactor } from "better-auth/plugins";
 
 import { getDb, type Database } from "@/db";
+import { ensureDefaultPfEntity } from "@/db/entities";
 import * as schema from "@/db/schema";
 import { messages } from "@/messages/pt-BR";
 
@@ -30,6 +31,15 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: false,
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (createdUser) => {
+          await ensureDefaultPfEntity(createdUser.id);
+        },
+      },
+    },
   },
   plugins: [
     twoFactor({
