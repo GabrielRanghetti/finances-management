@@ -4,6 +4,7 @@ import { messages } from "@/messages/pt-BR";
 
 const navItems = [
   { href: "/app", label: messages.nav.dashboard },
+  { href: "/app/entities", label: messages.nav.entities },
   { href: "/app/accounts", label: messages.nav.accounts },
   { href: "/app/investments", label: messages.nav.investments },
   { href: "/app/budget", label: messages.nav.budget },
