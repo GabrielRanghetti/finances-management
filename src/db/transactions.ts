@@ -203,3 +203,166 @@ export async function createTransfer(userId: string, input: TransferInput) {
     .returning();
   return { transferId, transactions: rows };
 }
+
+export async function getTransferPair(userId: string, transactionId: string) {
+  const uid = requireUserId(userId);
+  const one = await getTransaction(uid, transactionId);
+  if (!one?.transferId) {
+    return null;
+  }
+  const pair = await getDb()
+    .select()
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.userId, uid),
+        eq(transactions.transferId, one.transferId),
+      ),
+    );
+  if (pair.length !== 2) {
+    return null;
+  }
+  const from = pair.find((row) => row.amountCents < 0) ?? null;
+  const to = pair.find((row) => row.amountCents > 0) ?? null;
+  if (!from || !to) {
+    return null;
+  }
+  return { transferId: one.transferId, from, to };
+}
+
+export async function updateTransaction(
+  userId: string,
+  transactionId: string,
+  input: TransactionInput,
+) {
+  const uid = requireUserId(userId);
+  const existing = await getTransaction(uid, transactionId);
+  if (!existing || existing.transferId) {
+    return null;
+  }
+  const account = await getAccount(uid, input.accountId);
+  if (!account) {
+    return null;
+  }
+  if (input.categoryId) {
+    const category = await getCategory(uid, input.categoryId);
+    if (!category) {
+      return null;
+    }
+  }
+
+  const rows = await getDb()
+    .update(transactions)
+    .set({
+      accountId: input.accountId,
+      date: input.date,
+      amountCents: input.amountCents,
+      description: input.description,
+      categoryId: input.categoryId ?? null,
+      notes: input.notes ?? null,
+    })
+    .where(
+      and(eq(transactions.userId, uid), eq(transactions.id, transactionId)),
+    )
+    .returning();
+  return rows[0] ?? null;
+}
+
+export async function updateTransfer(
+  userId: string,
+  transferId: string,
+  input: TransferInput,
+) {
+  const uid = requireUserId(userId);
+  if (input.fromAccountId === input.toAccountId || input.amountCents <= 0) {
+    return null;
+  }
+
+  const pair = await getDb()
+    .select()
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.userId, uid),
+        eq(transactions.transferId, transferId),
+      ),
+    );
+  if (pair.length !== 2) {
+    return null;
+  }
+
+  const fromAccount = await getAccount(uid, input.fromAccountId);
+  const toAccount = await getAccount(uid, input.toAccountId);
+  if (!fromAccount || !toAccount) {
+    return null;
+  }
+  if (input.categoryId) {
+    const category = await getCategory(uid, input.categoryId);
+    if (!category) {
+      return null;
+    }
+  }
+
+  const from = pair.find((row) => row.amountCents < 0);
+  const to = pair.find((row) => row.amountCents > 0);
+  if (!from || !to) {
+    return null;
+  }
+
+  const shared = {
+    date: input.date,
+    description: input.description,
+    categoryId: input.categoryId ?? null,
+    notes: input.notes ?? null,
+  };
+
+  const [fromUpdated] = await getDb()
+    .update(transactions)
+    .set({
+      ...shared,
+      accountId: input.fromAccountId,
+      amountCents: -input.amountCents,
+    })
+    .where(and(eq(transactions.userId, uid), eq(transactions.id, from.id)))
+    .returning();
+  const [toUpdated] = await getDb()
+    .update(transactions)
+    .set({
+      ...shared,
+      accountId: input.toAccountId,
+      amountCents: input.amountCents,
+    })
+    .where(and(eq(transactions.userId, uid), eq(transactions.id, to.id)))
+    .returning();
+
+  return { transferId, transactions: [fromUpdated, toUpdated] };
+}
+
+export async function deleteTransaction(userId: string, transactionId: string) {
+  const uid = requireUserId(userId);
+  const existing = await getTransaction(uid, transactionId);
+  if (!existing) {
+    return null;
+  }
+
+  if (existing.transferId) {
+    const rows = await getDb()
+      .delete(transactions)
+      .where(
+        and(
+          eq(transactions.userId, uid),
+          eq(transactions.transferId, existing.transferId),
+        ),
+      )
+      .returning();
+    return rows;
+  }
+
+  const rows = await getDb()
+    .delete(transactions)
+    .where(
+      and(eq(transactions.userId, uid), eq(transactions.id, transactionId)),
+    )
+    .returning();
+  return rows;
+}
