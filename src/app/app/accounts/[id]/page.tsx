@@ -49,9 +49,7 @@ export default async function AccountDetailPage({ params }: Props) {
       <dl className="grid gap-2 text-sm">
         <div>
           <dt className="font-medium">{messages.accounts.balance}</dt>
-          <dd>
-            R$ {formatCentsToBrl(balanceCents)}
-          </dd>
+          <dd>{messages.money(formatCentsToBrl(balanceCents))}</dd>
         </div>
         <div>
           <dt className="font-medium">{messages.accounts.type}</dt>
@@ -63,7 +61,7 @@ export default async function AccountDetailPage({ params }: Props) {
         </div>
         <div>
           <dt className="font-medium">{messages.accounts.institution}</dt>
-          <dd>{account.institution || "—"}</dd>
+          <dd>{account.institution || messages.emptyValue}</dd>
         </div>
         <div>
           <dt className="font-medium">{messages.accounts.entity}</dt>
@@ -75,13 +73,13 @@ export default async function AccountDetailPage({ params }: Props) {
                     ? messages.entities.typePj
                     : messages.entities.typePf,
                 )
-              : "—"}
+              : messages.emptyValue}
           </dd>
         </div>
         {account.archived ? (
           <div>
             <dt className="font-medium">{messages.accounts.archived}</dt>
-            <dd>✓</dd>
+            <dd>{messages.accounts.archivedYes}</dd>
           </div>
         ) : null}
       </dl>
