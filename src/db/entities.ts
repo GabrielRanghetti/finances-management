@@ -3,6 +3,8 @@ import { and, eq } from "drizzle-orm";
 import { getDb } from "./index";
 import { entities, type EntityType } from "./schema";
 
+export const DEFAULT_PF_ENTITY_NAME = "Pessoa física";
+
 export type EntityInput = {
   type: EntityType;
   name: string;
@@ -31,6 +33,7 @@ export async function getEntity(userId: string, entityId: string) {
   return rows[0] ?? null;
 }
 
+/** Idempotent: safe under concurrent callers (unique default-PF index). */
 export async function ensureDefaultPfEntity(userId: string) {
   const uid = requireUserId(userId);
   const existing = await getDb()
@@ -41,15 +44,38 @@ export async function ensureDefaultPfEntity(userId: string) {
   if (existing[0]) {
     return existing[0];
   }
-  const rows = await getDb()
-    .insert(entities)
-    .values({
-      userId: uid,
-      type: "pf",
-      name: "Pessoa física",
-    })
-    .returning();
-  return rows[0];
+
+  try {
+    const rows = await getDb()
+      .insert(entities)
+      .values({
+        userId: uid,
+        type: "pf",
+        name: DEFAULT_PF_ENTITY_NAME,
+      })
+      .returning();
+    if (rows[0]) {
+      return rows[0];
+    }
+  } catch (error) {
+    // Concurrent insert hit entities_user_default_pf_uidx.
+    const raced = await getDb()
+      .select()
+      .from(entities)
+      .where(and(eq(entities.userId, uid), eq(entities.type, "pf")))
+      .limit(1);
+    if (raced[0]) {
+      return raced[0];
+    }
+    throw error;
+  }
+
+  const fallback = await getDb()
+    .select()
+    .from(entities)
+    .where(and(eq(entities.userId, uid), eq(entities.type, "pf")))
+    .limit(1);
+  return fallback[0]!;
 }
 
 export async function createEntity(userId: string, input: EntityInput) {
