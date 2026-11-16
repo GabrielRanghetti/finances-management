@@ -61,7 +61,11 @@ function isoDateFromDataHora(dataHoraCotacao: string): string | null {
   return match ? match[1] : null;
 }
 
-/** Keep only Fechamento (closing) quotes; one per calendar day. */
+/**
+ * Keep only Fechamento (closing) quotes; one per calendar day.
+ * Abertura/Intermediário rows are ignored. A day with no Fechamento yet
+ * has no rate.
+ */
 export function parseCotacaoMoedaPeriodo(
   rawJson: string,
   currency: string,
