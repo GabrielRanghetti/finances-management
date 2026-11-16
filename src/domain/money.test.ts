@@ -2,7 +2,9 @@ import { describe, expect, test } from "vitest";
 
 import {
   accountBalanceCents,
+  formatBalanceCentsToBrl,
   formatCentsToBrl,
+  formatSignedCentsToBrl,
   incomeExpenseTotals,
   parseBrlToCents,
   totalsByCategory,
@@ -31,6 +33,23 @@ describe("formatCentsToBrl", () => {
   test("formats cents", () => {
     expect(formatCentsToBrl(123456)).toBe("1.234,56");
     expect(formatCentsToBrl(-50)).toBe("-0,50");
+  });
+
+  test("formats signed cents with plus and unicode minus", () => {
+    expect(formatSignedCentsToBrl(738000)).toBe("+7.380,00");
+    expect(formatSignedCentsToBrl(738000, true)).toBe("+ R$ 7.380,00");
+    expect(formatSignedCentsToBrl(-41237)).toBe("−412,37");
+    expect(formatSignedCentsToBrl(-41237, true)).toBe("− R$ 412,37");
+    expect(formatSignedCentsToBrl(0)).toBe("0,00");
+    expect(formatSignedCentsToBrl(0, true)).toBe("R$ 0,00");
+  });
+
+  test("formats balances unsigned when non-negative and with unicode minus when negative", () => {
+    expect(formatBalanceCentsToBrl(45638000)).toBe("456.380,00");
+    expect(formatBalanceCentsToBrl(45638000, true)).toBe("R$ 456.380,00");
+    expect(formatBalanceCentsToBrl(-31899000)).toBe("−318.990,00");
+    expect(formatBalanceCentsToBrl(-31899000, true)).toBe("− R$ 318.990,00");
+    expect(formatBalanceCentsToBrl(0, true)).toBe("R$ 0,00");
   });
 });
 
