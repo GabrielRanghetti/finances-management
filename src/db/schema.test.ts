@@ -7,6 +7,7 @@ import {
   connections,
   csvImportMappings,
   entities,
+  fxRates,
   loanTerms,
   transactions,
   valuations,
@@ -71,4 +72,20 @@ test("csv_import_mappings carries user_id", () => {
 test("connections and maps carry user_id", () => {
   expect(connections.userId.name).toBe("user_id");
   expect(connectionAccountMaps.userId.name).toBe("user_id");
+});
+
+test("fx_rates has no user_id and stores rates as numeric", () => {
+  expect(Object.keys(fxRates)).toEqual(
+    expect.arrayContaining([
+      "id",
+      "currency",
+      "date",
+      "buyRate",
+      "sellRate",
+      "createdAt",
+    ]),
+  );
+  expect(Object.keys(fxRates)).not.toContain("userId");
+  expect(fxRates.buyRate.name).toBe("buy_rate");
+  expect(fxRates.sellRate.name).toBe("sell_rate");
 });

@@ -281,3 +281,21 @@ export const connectionAccountMaps = pgTable(
     ),
   ],
 );
+
+/** Public BCB PTAX data: one row per currency and date; no user_id. */
+export const fxRates = pgTable(
+  "fx_rates",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    currency: text("currency").notNull(),
+    date: date("date").notNull(),
+    buyRate: numeric("buy_rate", { precision: 18, scale: 8 }).notNull(),
+    sellRate: numeric("sell_rate", { precision: 18, scale: 8 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("fx_rates_currency_date_uidx").on(table.currency, table.date),
+  ],
+);
