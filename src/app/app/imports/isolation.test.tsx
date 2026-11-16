@@ -36,6 +36,7 @@ vi.mock("@/lib/auth", () => ({
 }));
 
 import ImportsPage from "./page";
+import CsvImportPage from "./csv/page";
 import OfxImportPage from "./ofx/page";
 import { createAccount } from "@/db/accounts";
 import { getDb } from "@/db/index";
@@ -88,7 +89,12 @@ describe("imports route isolation", () => {
     expect(html).not.toContain("Conta Import B");
 
     getSession.mockResolvedValue(asSession(userB));
-    const htmlB = renderToStaticMarkup(await ImportsPage());
-    expect(htmlB).toContain("OFX");
+    const htmlCsv = renderToStaticMarkup(await CsvImportPage());
+    expect(htmlCsv).toContain("Conta Import B");
+    expect(htmlCsv).not.toContain("Conta Import A");
+
+    const htmlIndex = renderToStaticMarkup(await ImportsPage());
+    expect(htmlIndex).toContain("OFX");
+    expect(htmlIndex).toContain("CSV");
   });
 });

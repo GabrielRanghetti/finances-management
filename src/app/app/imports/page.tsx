@@ -24,6 +24,11 @@ export default async function ImportsPage() {
             {messages.imports.ofxLink}
           </Link>
         </li>
+        <li>
+          <Link className="underline" href="/app/imports/csv">
+            {messages.imports.csvLink}
+          </Link>
+        </li>
       </ul>
     </main>
   );

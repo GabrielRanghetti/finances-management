@@ -3,6 +3,7 @@ import { expect, test } from "vitest";
 import {
   accounts,
   categories,
+  csvImportMappings,
   entities,
   loanTerms,
   transactions,
@@ -58,4 +59,9 @@ test("loan_terms stores principal as cents and rate as numeric", () => {
 test("valuations store value as integer cents", () => {
   expect(valuations.userId.name).toBe("user_id");
   expect(valuations.valueCents.name).toBe("value_cents");
+});
+
+test("csv_import_mappings carries user_id", () => {
+  expect(csvImportMappings.userId.name).toBe("user_id");
+  expect(csvImportMappings.accountId.name).toBe("account_id");
 });

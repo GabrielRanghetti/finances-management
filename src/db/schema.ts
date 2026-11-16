@@ -181,3 +181,39 @@ export const valuations = pgTable("valuations", {
     .notNull()
     .defaultNow(),
 });
+
+export const csvDateFormats = ["dd/mm/yyyy", "yyyy-mm-dd", "mm/dd/yyyy"] as const;
+export type CsvDateFormat = (typeof csvDateFormats)[number];
+
+export const csvDecimalSeparators = [".", ","] as const;
+export type CsvDecimalSeparator = (typeof csvDecimalSeparators)[number];
+
+export const csvImportMappings = pgTable(
+  "csv_import_mappings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    dateColumn: integer("date_column").notNull(),
+    amountColumn: integer("amount_column"),
+    debitColumn: integer("debit_column"),
+    creditColumn: integer("credit_column"),
+    descriptionColumn: integer("description_column").notNull(),
+    idColumn: integer("id_column"),
+    dateFormat: text("date_format").notNull(),
+    decimalSeparator: text("decimal_separator").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("csv_import_mappings_account_id_uidx").on(table.accountId),
+  ],
+);
