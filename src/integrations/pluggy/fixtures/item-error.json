@@ -1,0 +1,9 @@
+{
+  "id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+  "status": "LOGIN_ERROR",
+  "executionStatus": "ERROR",
+  "error": {
+    "code": "INVALID_CREDENTIALS",
+    "message": "Login failed"
+  }
+}

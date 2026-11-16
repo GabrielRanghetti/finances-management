@@ -39,6 +39,34 @@ export async function listAccountTransactionRefs(
     );
 }
 
+async function insertImportRows(
+  uid: string,
+  accountId: string,
+  rows: readonly ImportRowInput[],
+  executor: Database,
+) {
+  const created = [];
+  for (const row of rows) {
+    const saved = await createTransaction(
+      uid,
+      {
+        accountId,
+        date: row.date,
+        amountCents: row.amountCents,
+        description: row.description,
+        source: row.source,
+        externalId: row.externalId,
+      },
+      executor,
+    );
+    if (!saved) {
+      throw new Error("import_insert_failed");
+    }
+    created.push(saved);
+  }
+  return created;
+}
+
 /** All-or-nothing save of import rows. Checks account ownership first. */
 export async function saveImportedTransactions(
   userId: string,
@@ -56,26 +84,40 @@ export async function saveImportedTransactions(
   }
 
   const db = getDb();
+  return db.transaction(async (tx) =>
+    insertImportRows(uid, accountId, rows, tx as unknown as Database),
+  );
+}
+
+/** All-or-nothing save across several accounts in one transaction. */
+export async function saveImportedTransactionGroups(
+  userId: string,
+  groups: readonly { accountId: string; rows: readonly ImportRowInput[] }[],
+) {
+  const uid = requireUserId(userId);
+  for (const group of groups) {
+    const account = await getAccount(uid, group.accountId);
+    if (!account) {
+      return null;
+    }
+  }
+
+  const db = getDb();
   return db.transaction(async (tx) => {
     const executor = tx as unknown as Database;
     const created = [];
-    for (const row of rows) {
-      const saved = await createTransaction(
-        uid,
-        {
-          accountId,
-          date: row.date,
-          amountCents: row.amountCents,
-          description: row.description,
-          source: row.source,
-          externalId: row.externalId,
-        },
-        executor,
-      );
-      if (!saved) {
-        throw new Error("import_insert_failed");
+    for (const group of groups) {
+      if (group.rows.length === 0) {
+        continue;
       }
-      created.push(saved);
+      created.push(
+        ...(await insertImportRows(
+          uid,
+          group.accountId,
+          group.rows,
+          executor,
+        )),
+      );
     }
     return created;
   });

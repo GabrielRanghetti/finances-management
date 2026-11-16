@@ -3,6 +3,8 @@ import { expect, test } from "vitest";
 import {
   accounts,
   categories,
+  connectionAccountMaps,
+  connections,
   csvImportMappings,
   entities,
   loanTerms,
@@ -64,4 +66,9 @@ test("valuations store value as integer cents", () => {
 test("csv_import_mappings carries user_id", () => {
   expect(csvImportMappings.userId.name).toBe("user_id");
   expect(csvImportMappings.accountId.name).toBe("account_id");
+});
+
+test("connections and maps carry user_id", () => {
+  expect(connections.userId.name).toBe("user_id");
+  expect(connectionAccountMaps.userId.name).toBe("user_id");
 });

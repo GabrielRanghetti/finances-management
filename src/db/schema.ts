@@ -217,3 +217,67 @@ export const csvImportMappings = pgTable(
     uniqueIndex("csv_import_mappings_account_id_uidx").on(table.accountId),
   ],
 );
+
+export const connectionStatuses = [
+  "active",
+  "error",
+  "expired",
+] as const;
+export type ConnectionStatus = (typeof connectionStatuses)[number];
+
+export const connections = pgTable(
+  "connections",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    itemId: text("item_id").notNull(),
+    entityId: uuid("entity_id")
+      .notNull()
+      .references(() => entities.id, { onDelete: "restrict" }),
+    lastSyncAt: timestamp("last_sync_at", { withTimezone: true }),
+    status: text("status").notNull().default("active"),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("connections_user_provider_item_uidx").on(
+      table.userId,
+      table.provider,
+      table.itemId,
+    ),
+  ],
+);
+
+export const connectionAccountMaps = pgTable(
+  "connection_account_maps",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    connectionId: uuid("connection_id")
+      .notNull()
+      .references(() => connections.id, { onDelete: "cascade" }),
+    pluggyAccountId: text("pluggy_account_id").notNull(),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("connection_account_maps_pluggy_uidx").on(
+      table.connectionId,
+      table.pluggyAccountId,
+    ),
+  ],
+);
