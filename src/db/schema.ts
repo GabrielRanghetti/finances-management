@@ -40,7 +40,13 @@ export type AccountType = (typeof accountTypes)[number];
 export const categoryKinds = ["income", "expense"] as const;
 export type CategoryKind = (typeof categoryKinds)[number];
 
-export const transactionSources = ["manual"] as const;
+export const transactionSources = [
+  "manual",
+  "ofx",
+  "csv",
+  "pdf",
+  "pluggy",
+] as const;
 export type TransactionSource = (typeof transactionSources)[number];
 
 export const entities = pgTable(
@@ -175,3 +181,103 @@ export const valuations = pgTable("valuations", {
     .notNull()
     .defaultNow(),
 });
+
+export const csvDateFormats = ["dd/mm/yyyy", "yyyy-mm-dd", "mm/dd/yyyy"] as const;
+export type CsvDateFormat = (typeof csvDateFormats)[number];
+
+export const csvDecimalSeparators = [".", ","] as const;
+export type CsvDecimalSeparator = (typeof csvDecimalSeparators)[number];
+
+export const csvImportMappings = pgTable(
+  "csv_import_mappings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    dateColumn: integer("date_column").notNull(),
+    amountColumn: integer("amount_column"),
+    debitColumn: integer("debit_column"),
+    creditColumn: integer("credit_column"),
+    descriptionColumn: integer("description_column").notNull(),
+    idColumn: integer("id_column"),
+    dateFormat: text("date_format").notNull(),
+    decimalSeparator: text("decimal_separator").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("csv_import_mappings_account_id_uidx").on(table.accountId),
+  ],
+);
+
+export const connectionStatuses = [
+  "active",
+  "error",
+  "expired",
+] as const;
+export type ConnectionStatus = (typeof connectionStatuses)[number];
+
+export const connections = pgTable(
+  "connections",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    itemId: text("item_id").notNull(),
+    entityId: uuid("entity_id")
+      .notNull()
+      .references(() => entities.id, { onDelete: "restrict" }),
+    lastSyncAt: timestamp("last_sync_at", { withTimezone: true }),
+    status: text("status").notNull().default("active"),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("connections_user_provider_item_uidx").on(
+      table.userId,
+      table.provider,
+      table.itemId,
+    ),
+  ],
+);
+
+export const connectionAccountMaps = pgTable(
+  "connection_account_maps",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    connectionId: uuid("connection_id")
+      .notNull()
+      .references(() => connections.id, { onDelete: "cascade" }),
+    pluggyAccountId: text("pluggy_account_id").notNull(),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("connection_account_maps_pluggy_uidx").on(
+      table.connectionId,
+      table.pluggyAccountId,
+    ),
+  ],
+);

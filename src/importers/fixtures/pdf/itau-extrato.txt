@@ -1,0 +1,20 @@
+saldo em conta Limite da Conta utilizado Limite da Conta disponível Limite da Conta total *
+R$ 10.000,00 R$ 0,00 R$ 0,00 R$ 0,00
+* Total contratado. O uso do Limite da Conta e Limite da Conta adicional poderá ter cobrança de juros + IOF.
+extrato conta / lançamentos
+período de visualização: 01/11/2026 até 15/11/2026  emitido em: 15/11/2026 10:00:00
+data lançamentos valor (R$) saldo (R$)
+01/11/2026 SALDO DO DIA 9.500,00
+02/11/2026 TED 123.4567.LOJA EXEMPLO S A 150,00
+02/11/2026 SALDO DO DIA 9.650,00
+05/11/2026 FINANC IMOBILIARIO 001/120 -1.234,56
+05/11/2026 REND PAGO APLIC AUT MAIS 3,21
+05/11/2026 SALDO DO DIA 8.418,65
+10/11/2026 PAG BOLETO ITAU UNIBANCO S/A -500,00
+10/11/2026 REND PAGO APLIC AUT MAIS 1,10
+10/11/2026 SALDO DO DIA 7.919,75
+12/11/2026 TED 987.6543 2.000,00
+12/11/2026 SALDO DO DIA 9.919,75
+Aviso!
+Os saldos acima são baseados nas informações disponíveis até esse instante.
+   PESSOA FICTICIA 000.000.000-00 agência: 0001 conta: 123456-7
