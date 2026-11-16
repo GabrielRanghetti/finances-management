@@ -2,9 +2,11 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
 import {
+  cancelInstallmentGroupAction,
   deleteTransactionAction,
   updateExpenseAction,
   updateIncomeAction,
+  updateInstallmentGroupAction,
   updateTransferAction,
 } from "../../actions";
 import { TransactionForm } from "../../transaction-form";
@@ -13,7 +15,9 @@ import { ensureDefaultCategories } from "@/db/categories";
 import {
   getTransaction,
   getTransferPair,
+  listInstallmentGroup,
 } from "@/db/transactions";
+import { installmentBaseDescription } from "@/domain/installments";
 import { formatCentsToBrl } from "@/domain/money";
 import { auth } from "@/lib/auth";
 import { messages } from "@/messages/pt-BR";
@@ -42,6 +46,66 @@ export default async function EditTransactionPage({ params }: Props) {
     listAccounts(session.user.id, { includeArchived: true }),
     ensureDefaultCategories(session.user.id),
   ]);
+
+  if (transaction.installmentGroupId) {
+    const group = await listInstallmentGroup(
+      session.user.id,
+      transaction.installmentGroupId,
+    );
+    if (group.length === 0) {
+      notFound();
+    }
+    const kindCategories = categories.filter(
+      (category) => category.parentId && category.kind === "expense",
+    );
+    const action = updateInstallmentGroupAction.bind(
+      null,
+      transaction.installmentGroupId,
+    );
+    const cancel = cancelInstallmentGroupAction.bind(
+      null,
+      transaction.installmentGroupId,
+    );
+
+    return (
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 p-6">
+        <h1 className="text-2xl font-semibold">
+          {messages.transactions.editInstallments}
+        </h1>
+        <ul className="flex flex-col gap-1 text-sm">
+          {group.map((row) => (
+            <li key={row.id}>
+              {row.date}
+              {" · "}
+              {messages.money(formatCentsToBrl(row.amountCents))}
+              {" · "}
+              {row.description}
+            </li>
+          ))}
+        </ul>
+        <TransactionForm
+          mode="installment-group"
+          action={action}
+          accounts={accounts}
+          categories={kindCategories}
+          defaults={{
+            date: group[0].date,
+            amount: formatCentsToBrl(
+              Math.abs(group.reduce((sum, row) => sum + row.amountCents, 0)),
+            ),
+            description: installmentBaseDescription(group[0].description),
+            notes: group[0].notes,
+            categoryId: group[0].categoryId,
+          }}
+        />
+        <form action={cancel}>
+          <button className="rounded border px-3 py-2 text-sm" type="submit">
+            {messages.transactions.cancelInstallments}
+          </button>
+        </form>
+      </main>
+    );
+  }
 
   const deleteAction = deleteTransactionAction.bind(null, transaction.id);
 

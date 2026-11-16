@@ -3,15 +3,20 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { getAccount } from "@/db/accounts";
 import {
+  cancelInstallmentGroup,
+  createInstallmentPurchase,
   createTransaction,
   createTransfer,
   deleteTransaction,
   getTransaction,
   getTransferPair,
+  updateInstallmentGroup,
   updateTransaction,
   updateTransfer,
 } from "@/db/transactions";
+import { installmentBaseDescription } from "@/domain/installments";
 import { parseBrlToCents } from "@/domain/money";
 import { auth } from "@/lib/auth";
 import { messages } from "@/messages/pt-BR";
@@ -101,6 +106,36 @@ export async function createExpenseAction(
   const accountId = String(formData.get("accountId") ?? "").trim();
   if (!accountId) {
     return { error: messages.transactions.errorGeneric };
+  }
+
+  const installmentRaw = String(formData.get("installmentCount") ?? "1").trim();
+  const installmentCount = Number(installmentRaw || "1");
+  if (
+    !Number.isInteger(installmentCount) ||
+    installmentCount < 1 ||
+    installmentCount > 60
+  ) {
+    return { error: messages.transactions.errorInstallments };
+  }
+
+  if (installmentCount > 1) {
+    const account = await getAccount(session.user.id, accountId);
+    if (!account || account.type !== "credit_card") {
+      return { error: messages.transactions.errorCreditCard };
+    }
+    const created = await createInstallmentPurchase(session.user.id, {
+      accountId,
+      date: common.date!,
+      amountCents: common.amountCents!,
+      description: common.description!,
+      installmentCount,
+      categoryId: common.categoryId,
+      notes: common.notes,
+    });
+    if (!created) {
+      return { error: messages.transactions.errorGeneric };
+    }
+    redirect("/app/transactions");
   }
 
   const created = await createTransaction(session.user.id, {
@@ -280,5 +315,47 @@ export async function deleteTransactionAction(transactionId: string) {
   }
 
   await deleteTransaction(session.user.id, transactionId);
+  redirect("/app/transactions");
+}
+
+export async function updateInstallmentGroupAction(
+  installmentGroupId: string,
+  _prev: { error?: string } | undefined,
+  formData: FormData,
+) {
+  const session = await requireSession();
+  if (!session) {
+    redirect("/sign-in");
+  }
+
+  const description = String(formData.get("description") ?? "").trim();
+  const categoryId = String(formData.get("categoryId") ?? "").trim();
+  if (!description) {
+    return { error: messages.transactions.errorGeneric };
+  }
+
+  const updated = await updateInstallmentGroup(
+    session.user.id,
+    installmentGroupId,
+    {
+      description: installmentBaseDescription(description),
+      categoryId: categoryId || null,
+    },
+  );
+  if (!updated) {
+    return { error: messages.transactions.errorNotFound };
+  }
+  redirect("/app/transactions");
+}
+
+export async function cancelInstallmentGroupAction(
+  installmentGroupId: string,
+) {
+  const session = await requireSession();
+  if (!session) {
+    redirect("/sign-in");
+  }
+
+  await cancelInstallmentGroup(session.user.id, installmentGroupId);
   redirect("/app/transactions");
 }

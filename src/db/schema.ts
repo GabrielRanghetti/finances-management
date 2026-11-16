@@ -9,6 +9,8 @@ import {
   bigint,
   boolean,
   date,
+  integer,
+  numeric,
   pgTable,
   text,
   timestamp,
@@ -75,6 +77,11 @@ export const accounts = pgTable("accounts", {
   type: text("type").notNull(),
   currency: text("currency").notNull(),
   institution: text("institution"),
+  /** Day of month when a credit card statement closes (1–31). */
+  closingDay: integer("closing_day"),
+  /** Acquisition cost for property, vehicle and other (tax / history). */
+  acquisitionCostCents: bigint("acquisition_cost_cents", { mode: "number" }),
+  acquisitionDate: date("acquisition_date"),
   archived: boolean("archived").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
@@ -126,3 +133,45 @@ export const transactions = pgTable(
     ),
   ],
 );
+
+export const loanTerms = pgTable(
+  "loan_terms",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    principalCents: bigint("principal_cents", { mode: "number" }).notNull(),
+    monthlyInterestRate: numeric("monthly_interest_rate", {
+      precision: 12,
+      scale: 8,
+    }).notNull(),
+    termMonths: integer("term_months").notNull(),
+    firstPaymentDate: date("first_payment_date").notNull(),
+    system: text("system").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("loan_terms_account_id_uidx").on(table.accountId),
+  ],
+);
+
+export const valuations = pgTable("valuations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  accountId: uuid("account_id")
+    .notNull()
+    .references(() => accounts.id, { onDelete: "cascade" }),
+  date: date("date").notNull(),
+  valueCents: bigint("value_cents", { mode: "number" }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});

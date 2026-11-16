@@ -10,10 +10,23 @@ import {
 import { getDb } from "./index";
 import { user } from "./schema";
 import {
+  createLoanWithTerms,
+  getLoanTerms,
+  listLoanTerms,
+} from "./loans";
+import {
+  cancelInstallmentGroup,
+  createInstallmentPurchase,
   createTransaction,
   getTransaction,
+  listInstallmentGroup,
   listTransactions,
 } from "./transactions";
+import {
+  createValuation,
+  getValuation,
+  listValuations,
+} from "./valuations";
 
 beforeAll(async () => {
   const db = getDb();
@@ -106,5 +119,117 @@ describe("user data isolation", () => {
     expect(txListA.map((row) => row.id)).toEqual([txA!.id]);
     expect(txListB.map((row) => row.id)).toEqual([txB!.id]);
     expect(await getTransaction(userA.id, txB!.id)).toBeNull();
+
+    const cardA = await createAccount(userA.id, {
+      name: "Cartão A",
+      type: "credit_card",
+      currency: "BRL",
+      entityId: entityA.id,
+      closingDay: 10,
+    });
+    const cardB = await createAccount(userB.id, {
+      name: "Cartão B",
+      type: "credit_card",
+      currency: "BRL",
+      entityId: entityB.id,
+      closingDay: 5,
+    });
+    const installmentsA = await createInstallmentPurchase(userA.id, {
+      accountId: cardA.id,
+      date: "2026-02-01",
+      amountCents: 1000,
+      description: "Loja A",
+      installmentCount: 2,
+    });
+    const installmentsB = await createInstallmentPurchase(userB.id, {
+      accountId: cardB.id,
+      date: "2026-02-01",
+      amountCents: 2000,
+      description: "Loja B",
+      installmentCount: 2,
+    });
+    expect(installmentsA).not.toBeNull();
+    expect(installmentsB).not.toBeNull();
+
+    const groupA = await listInstallmentGroup(
+      userA.id,
+      installmentsA!.installmentGroupId,
+    );
+    const groupCross = await listInstallmentGroup(
+      userA.id,
+      installmentsB!.installmentGroupId,
+    );
+    expect(groupA).toHaveLength(2);
+    expect(groupCross).toHaveLength(0);
+    expect(
+      await cancelInstallmentGroup(
+        userA.id,
+        installmentsB!.installmentGroupId,
+      ),
+    ).toBeNull();
+    expect(
+      await listInstallmentGroup(userB.id, installmentsB!.installmentGroupId),
+    ).toHaveLength(2);
+
+    const loanA = await createAccount(userA.id, {
+      name: "Empréstimo A",
+      type: "loan",
+      currency: "BRL",
+      entityId: entityA.id,
+    });
+    const loanB = await createAccount(userB.id, {
+      name: "Empréstimo B",
+      type: "loan",
+      currency: "BRL",
+      entityId: entityB.id,
+    });
+    await createLoanWithTerms(userA.id, {
+      accountId: loanA.id,
+      principalCents: 50_000,
+      monthlyInterestRate: 0.01,
+      termMonths: 2,
+      firstPaymentDate: "2026-05-01",
+      system: "sac",
+    });
+    await createLoanWithTerms(userB.id, {
+      accountId: loanB.id,
+      principalCents: 60_000,
+      monthlyInterestRate: 0.01,
+      termMonths: 2,
+      firstPaymentDate: "2026-05-01",
+      system: "price",
+    });
+    expect(await listLoanTerms(userA.id)).toHaveLength(1);
+    expect(await getLoanTerms(userA.id, loanB.id)).toBeNull();
+
+    const propA = await createAccount(userA.id, {
+      name: "Imóvel A",
+      type: "property",
+      currency: "BRL",
+      entityId: entityA.id,
+      acquisitionCostCents: 100_000,
+      acquisitionDate: "2020-01-01",
+    });
+    const propB = await createAccount(userB.id, {
+      name: "Imóvel B",
+      type: "property",
+      currency: "BRL",
+      entityId: entityB.id,
+      acquisitionCostCents: 200_000,
+      acquisitionDate: "2020-01-01",
+    });
+    const valA = await createValuation(userA.id, {
+      accountId: propA.id,
+      date: "2026-01-01",
+      valueCents: 120_000,
+    });
+    const valB = await createValuation(userB.id, {
+      accountId: propB.id,
+      date: "2026-01-01",
+      valueCents: 220_000,
+    });
+    expect(await listValuations(userA.id)).toHaveLength(1);
+    expect(await getValuation(userA.id, valB!.id)).toBeNull();
+    expect(await getValuation(userA.id, valA!.id)).not.toBeNull();
   });
 });

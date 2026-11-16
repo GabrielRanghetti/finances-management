@@ -50,6 +50,27 @@
       "when": 1794765138750,
       "tag": "0006_tense_speed",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794777937819,
+      "tag": "0007_superb_network",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794778211329,
+      "tag": "0008_medical_franklin_richards",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794778453821,
+      "tag": "0009_superb_william_stryker",
+      "breakpoints": true
     }
   ]
 }

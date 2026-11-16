@@ -30,6 +30,7 @@ const DEFAULT_TREE: {
       "Educação",
       "Lazer",
       "Impostos",
+      "Juros",
       "Outras despesas",
     ],
   },
@@ -88,29 +89,67 @@ export async function ensureDefaultCategories(userId: string) {
     .from(categories)
     .where(and(eq(categories.userId, uid), isNull(categories.parentId)))
     .limit(1);
-  if (existing[0]) {
-    return listCategories(uid);
-  }
-
-  for (const group of DEFAULT_TREE) {
-    const [parent] = await getDb()
-      .insert(categories)
-      .values({
-        userId: uid,
-        name: group.name,
-        kind: group.kind,
-        parentId: null,
-      })
-      .returning();
-    for (const childName of group.children) {
-      await getDb().insert(categories).values({
-        userId: uid,
-        name: childName,
-        kind: group.kind,
-        parentId: parent.id,
-      });
+  if (!existing[0]) {
+    for (const group of DEFAULT_TREE) {
+      const [parent] = await getDb()
+        .insert(categories)
+        .values({
+          userId: uid,
+          name: group.name,
+          kind: group.kind,
+          parentId: null,
+        })
+        .returning();
+      for (const childName of group.children) {
+        await getDb().insert(categories).values({
+          userId: uid,
+          name: childName,
+          kind: group.kind,
+          parentId: parent.id,
+        });
+      }
     }
   }
 
+  await ensureNamedCategory(uid, "Juros", "expense");
   return listCategories(uid);
+}
+
+export async function ensureNamedCategory(
+  userId: string,
+  name: string,
+  kind: CategoryKind,
+) {
+  const uid = requireUserId(userId);
+  const found = await findCategoryByName(uid, name, kind);
+  if (found) {
+    return found;
+  }
+
+  const parents = await getDb()
+    .select()
+    .from(categories)
+    .where(
+      and(
+        eq(categories.userId, uid),
+        eq(categories.kind, kind),
+        isNull(categories.parentId),
+      ),
+    )
+    .limit(1);
+  const parent = parents[0];
+  if (!parent) {
+    return null;
+  }
+
+  const [created] = await getDb()
+    .insert(categories)
+    .values({
+      userId: uid,
+      name,
+      kind,
+      parentId: parent.id,
+    })
+    .returning();
+  return created;
 }

@@ -186,6 +186,9 @@ export default async function TransactionsListPage({ searchParams }: Props) {
                 {row.transferId
                   ? ` (${messages.transactions.transferTag})`
                   : ""}
+                {row.installmentGroupId
+                  ? ` (${messages.transactions.installmentTag})`
+                  : ""}
               </span>
               <span>{row.description}</span>
               <span className="text-zinc-600">
