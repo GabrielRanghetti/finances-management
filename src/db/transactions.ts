@@ -18,6 +18,8 @@ export type TransactionInput = {
   description: string;
   categoryId?: string | null;
   notes?: string | null;
+  source?: string;
+  externalId?: string | null;
 };
 
 export type TransferInput = {
@@ -177,7 +179,8 @@ export async function createTransaction(
       description: input.description,
       categoryId: input.categoryId ?? null,
       notes: input.notes ?? null,
-      source: "manual",
+      source: input.source ?? "manual",
+      externalId: input.externalId ?? null,
     })
     .returning();
   return rows[0];

@@ -30,7 +30,11 @@ export const dynamic = "force-dynamic";
 
 type Props = {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ statementDate?: string }>;
+  searchParams?: Promise<{
+    statementDate?: string;
+    imported?: string;
+    ledger?: string;
+  }>;
 };
 
 export default async function AccountDetailPage({
@@ -47,6 +51,11 @@ export default async function AccountDetailPage({
 
   const { id } = await params;
   const query = (await searchParams) ?? {};
+  const importedCount = query.imported ? Number(query.imported) : null;
+  const ledgerBalanceCents =
+    query.ledger !== undefined && query.ledger !== ""
+      ? Number(query.ledger)
+      : null;
   const account = await getAccountWithEntity(session.user.id, id);
 
   if (!account) {
@@ -112,11 +121,22 @@ export default async function AccountDetailPage({
           {messages.accounts.edit}
         </Link>
       </div>
+      {importedCount !== null && Number.isFinite(importedCount) ? (
+        <p className="text-sm text-zinc-700">
+          {messages.imports.saved(importedCount)}
+        </p>
+      ) : null}
       <dl className="grid gap-2 text-sm">
         <div>
           <dt className="font-medium">{messages.accounts.balance}</dt>
           <dd>{messages.money(formatCentsToBrl(balanceCents))}</dd>
         </div>
+        {ledgerBalanceCents !== null && Number.isFinite(ledgerBalanceCents) ? (
+          <div>
+            <dt className="font-medium">{messages.imports.ledgerBalance}</dt>
+            <dd>{messages.money(formatCentsToBrl(ledgerBalanceCents))}</dd>
+          </div>
+        ) : null}
         <div>
           <dt className="font-medium">{messages.accounts.type}</dt>
           <dd>{typeLabel}</dd>

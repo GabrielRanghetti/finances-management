@@ -40,7 +40,13 @@ export type AccountType = (typeof accountTypes)[number];
 export const categoryKinds = ["income", "expense"] as const;
 export type CategoryKind = (typeof categoryKinds)[number];
 
-export const transactionSources = ["manual"] as const;
+export const transactionSources = [
+  "manual",
+  "ofx",
+  "csv",
+  "pdf",
+  "pluggy",
+] as const;
 export type TransactionSource = (typeof transactionSources)[number];
 
 export const entities = pgTable(
