@@ -8,6 +8,7 @@ import {
   previewOfxAction,
   type OfxPreviewState,
 } from "../actions";
+import { MAX_IMPORT_BYTES } from "../limits";
 import { formatCentsToBrl } from "@/domain/money";
 import { messages } from "@/messages/pt-BR";
 
@@ -23,6 +24,7 @@ export function OfxImportForm({ accounts }: Props) {
     undefined as OfxPreviewState | undefined,
   );
   const [confirmError, setConfirmError] = useState<string | undefined>();
+  const [clientError, setClientError] = useState<string | undefined>();
   const [pending, startTransition] = useTransition();
   const [file, setFile] = useState<File | null>(null);
   const [accountId, setAccountId] = useState("");
@@ -31,7 +33,7 @@ export function OfxImportForm({ accounts }: Props) {
   >({});
 
   const rows = previewState?.rows;
-  const error = confirmError || previewState?.error;
+  const error = confirmError || clientError || previewState?.error;
 
   function isIncluded(index: number, defaultInclude: boolean) {
     return includeOverrides[index] ?? defaultInclude;
@@ -46,10 +48,15 @@ export function OfxImportForm({ accounts }: Props) {
 
   function onPreviewSubmit(formData: FormData) {
     setConfirmError(undefined);
+    setClientError(undefined);
     setIncludeOverrides({});
     const selected = formData.get("file");
     if (selected instanceof File) {
       setFile(selected);
+      if (selected.size > MAX_IMPORT_BYTES) {
+        setClientError(messages.imports.errorFileSize);
+        return;
+      }
     }
     setAccountId(String(formData.get("accountId") ?? ""));
     previewAction(formData);
@@ -110,6 +117,7 @@ export function OfxImportForm({ accounts }: Props) {
             onChange={(event) => {
               setFile(event.target.files?.[0] ?? null);
               setConfirmError(undefined);
+              setClientError(undefined);
             }}
           />
         </label>

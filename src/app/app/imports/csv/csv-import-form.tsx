@@ -9,6 +9,7 @@ import {
   startCsvImportAction,
   type CsvImportState,
 } from "../actions";
+import { MAX_IMPORT_BYTES } from "../limits";
 import { csvDateFormats, csvDecimalSeparators } from "@/db/schema";
 import { formatCentsToBrl } from "@/domain/money";
 import { messages } from "@/messages/pt-BR";
@@ -63,6 +64,7 @@ export function CsvImportForm({ accounts }: Props) {
     undefined as CsvImportState | undefined,
   );
   const [confirmError, setConfirmError] = useState<string | undefined>();
+  const [clientError, setClientError] = useState<string | undefined>();
   const [pending, startTransition] = useTransition();
   const [file, setFile] = useState<File | null>(null);
   const [accountId, setAccountId] = useState("");
@@ -75,7 +77,8 @@ export function CsvImportForm({ accounts }: Props) {
   const rows = previewState?.rows;
   const headers = mappingState?.headers ?? [];
   const mapping = mappingState?.mapping;
-  const error = confirmError || previewState?.error || startState?.error;
+  const error =
+    confirmError || clientError || previewState?.error || startState?.error;
   const resolvedAmountMode =
     amountMode ??
     (mapping && mapping.amountColumn === null ? "split" : "single");
@@ -113,11 +116,16 @@ export function CsvImportForm({ accounts }: Props) {
       <form
         action={(formData) => {
           setConfirmError(undefined);
+          setClientError(undefined);
           setIncludeOverrides({});
           setAmountMode(null);
           const selected = formData.get("file");
           if (selected instanceof File) {
             setFile(selected);
+            if (selected.size > MAX_IMPORT_BYTES) {
+              setClientError(messages.imports.errorFileSize);
+              return;
+            }
           }
           setAccountId(String(formData.get("accountId") ?? ""));
           startAction(formData);
@@ -149,7 +157,10 @@ export function CsvImportForm({ accounts }: Props) {
             type="file"
             accept=".csv,text/csv,text/plain"
             required
-            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+            onChange={(event) => {
+              setFile(event.target.files?.[0] ?? null);
+              setClientError(undefined);
+            }}
           />
         </label>
         <button

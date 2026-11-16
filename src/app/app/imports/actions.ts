@@ -34,7 +34,8 @@ import type { NormalizedImportRow } from "@/importers/types";
 import { auth } from "@/lib/auth";
 import { messages } from "@/messages/pt-BR";
 
-const MAX_IMPORT_BYTES = 5 * 1024 * 1024;
+import { MAX_IMPORT_BYTES } from "./limits";
+
 const MAX_OFX_BYTES = MAX_IMPORT_BYTES;
 
 export type OfxPreviewRow = NormalizedImportRow & {

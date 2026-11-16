@@ -8,6 +8,7 @@ import {
   previewPdfAction,
   type PdfPreviewState,
 } from "../actions";
+import { MAX_IMPORT_BYTES } from "../limits";
 import { formatCentsToBrl } from "@/domain/money";
 import { messages } from "@/messages/pt-BR";
 
@@ -23,6 +24,7 @@ export function PdfImportForm({ accounts }: Props) {
     undefined as PdfPreviewState | undefined,
   );
   const [confirmError, setConfirmError] = useState<string | undefined>();
+  const [clientError, setClientError] = useState<string | undefined>();
   const [pending, startTransition] = useTransition();
   const [file, setFile] = useState<File | null>(null);
   const [accountId, setAccountId] = useState("");
@@ -31,7 +33,7 @@ export function PdfImportForm({ accounts }: Props) {
   >({});
 
   const rows = previewState?.rows;
-  const error = confirmError || previewState?.error;
+  const error = confirmError || clientError || previewState?.error;
 
   function isIncluded(index: number, defaultInclude: boolean) {
     return includeOverrides[index] ?? defaultInclude;
@@ -66,10 +68,15 @@ export function PdfImportForm({ accounts }: Props) {
       <form
         action={(formData) => {
           setConfirmError(undefined);
+          setClientError(undefined);
           setIncludeOverrides({});
           const selected = formData.get("file");
           if (selected instanceof File) {
             setFile(selected);
+            if (selected.size > MAX_IMPORT_BYTES) {
+              setClientError(messages.imports.errorFileSize);
+              return;
+            }
           }
           setAccountId(String(formData.get("accountId") ?? ""));
           previewAction(formData);
@@ -101,7 +108,10 @@ export function PdfImportForm({ accounts }: Props) {
             type="file"
             accept=".pdf,application/pdf"
             required
-            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+            onChange={(event) => {
+              setFile(event.target.files?.[0] ?? null);
+              setClientError(undefined);
+            }}
           />
         </label>
         <button
