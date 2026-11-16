@@ -25,6 +25,10 @@ import {
   peekCsv,
   type CsvMapping,
 } from "@/importers/csv";
+import {
+  extractPdfText,
+  parseItauStatementText,
+} from "@/importers/itau-pdf";
 import { parseOfx } from "@/importers/ofx";
 import type { NormalizedImportRow } from "@/importers/types";
 import { auth } from "@/lib/auth";
@@ -495,6 +499,167 @@ export async function confirmCsvAction(
   const parsed = parseCsv(fileResult.text, mapping);
   if (!parsed.ok) {
     return { error: messages.imports.errorInvalidCsv };
+  }
+
+  const includeRaw = String(formData.get("includeIndexes") ?? "");
+  let includeIndexes: number[];
+  try {
+    const parsedIndexes = JSON.parse(includeRaw) as unknown;
+    if (
+      !Array.isArray(parsedIndexes) ||
+      !parsedIndexes.every((value) => Number.isInteger(value))
+    ) {
+      return { error: messages.imports.errorGeneric };
+    }
+    includeIndexes = parsedIndexes as number[];
+  } catch {
+    return { error: messages.imports.errorGeneric };
+  }
+
+  const selected = includeIndexes
+    .filter((index) => index >= 0 && index < parsed.rows.length)
+    .map((index) => parsed.rows[index]);
+
+  let saved;
+  try {
+    saved = await saveImportedTransactions(
+      session.user.id,
+      accountId,
+      selected,
+    );
+  } catch {
+    return { error: messages.imports.errorGeneric };
+  }
+  if (!saved) {
+    return { error: messages.imports.errorGeneric };
+  }
+  redirect(`/app/accounts/${accountId}?imported=${saved.length}`);
+}
+
+export type PdfPreviewRow = NormalizedImportRow & {
+  probableDuplicate: boolean;
+  include: boolean;
+};
+
+export type PdfPreviewState = {
+  error?: string;
+  accountId?: string;
+  accountBalanceCents?: number;
+  rows?: PdfPreviewRow[];
+};
+
+function isPdfFile(file: File): boolean {
+  const name = file.name.toLowerCase();
+  return (
+    name.endsWith(".pdf") ||
+    file.type === "application/pdf" ||
+    file.type === "application/octet-stream" ||
+    file.type === ""
+  );
+}
+
+async function readPdfFile(
+  formData: FormData,
+): Promise<{ bytes: Uint8Array } | { error: string }> {
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: messages.imports.errorFileTypePdf };
+  }
+  if (!isPdfFile(file)) {
+    return { error: messages.imports.errorFileTypePdf };
+  }
+  if (file.size > MAX_IMPORT_BYTES) {
+    return { error: messages.imports.errorFileSize };
+  }
+  return { bytes: new Uint8Array(await file.arrayBuffer()) };
+}
+
+async function parseItauPdfBytes(bytes: Uint8Array) {
+  let text: string;
+  try {
+    text = await extractPdfText(bytes);
+  } catch {
+    return { ok: false as const, error: "unrecognized_itau_pdf" as const };
+  }
+  return parseItauStatementText(text);
+}
+
+export async function previewPdfAction(
+  _prev: PdfPreviewState | undefined,
+  formData: FormData,
+): Promise<PdfPreviewState> {
+  const session = await requireSession();
+  if (!session) {
+    redirect("/sign-in");
+  }
+
+  const accountId = String(formData.get("accountId") ?? "").trim();
+  if (!accountId) {
+    return { error: messages.imports.errorAccount };
+  }
+  const account = await getAccount(session.user.id, accountId);
+  if (!account) {
+    return { error: messages.imports.errorAccount };
+  }
+
+  const fileResult = await readPdfFile(formData);
+  if ("error" in fileResult) {
+    return { error: fileResult.error };
+  }
+
+  const parsed = await parseItauPdfBytes(fileResult.bytes);
+  if (!parsed.ok) {
+    return { error: messages.imports.errorUnrecognizedItauPdf };
+  }
+
+  const existing = await listAccountTransactionRefs(
+    session.user.id,
+    accountId,
+  );
+  if (!existing) {
+    return { error: messages.imports.errorAccount };
+  }
+
+  const marked = markProbableDuplicates(parsed.rows, existing);
+  const amounts =
+    (await listAccountAmounts(session.user.id, accountId)) ?? [];
+
+  return {
+    accountId,
+    accountBalanceCents: accountBalanceCents(amounts),
+    rows: marked.map((row) => ({
+      ...row,
+      include: !row.probableDuplicate,
+    })),
+  };
+}
+
+export async function confirmPdfAction(
+  _prev: PdfPreviewState | undefined,
+  formData: FormData,
+): Promise<PdfPreviewState> {
+  const session = await requireSession();
+  if (!session) {
+    redirect("/sign-in");
+  }
+
+  const accountId = String(formData.get("accountId") ?? "").trim();
+  if (!accountId) {
+    return { error: messages.imports.errorAccount };
+  }
+  const account = await getAccount(session.user.id, accountId);
+  if (!account) {
+    return { error: messages.imports.errorAccount };
+  }
+
+  const fileResult = await readPdfFile(formData);
+  if ("error" in fileResult) {
+    return { error: fileResult.error };
+  }
+
+  const parsed = await parseItauPdfBytes(fileResult.bytes);
+  if (!parsed.ok) {
+    return { error: messages.imports.errorUnrecognizedItauPdf };
   }
 
   const includeRaw = String(formData.get("includeIndexes") ?? "");

@@ -29,6 +29,11 @@ export default async function ImportsPage() {
             {messages.imports.csvLink}
           </Link>
         </li>
+        <li>
+          <Link className="underline" href="/app/imports/pdf">
+            {messages.imports.pdfLink}
+          </Link>
+        </li>
       </ul>
     </main>
   );
