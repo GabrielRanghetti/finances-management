@@ -5,6 +5,7 @@ import { createAccount } from "./accounts";
 import { createEntity } from "./entities";
 import { upsertFxRates } from "./fx-rates";
 import { getDb } from "./index";
+import { createLoanWithTerms } from "./loans";
 import { getNetWorthOverview } from "./overview";
 import { user } from "./schema";
 import {
@@ -301,6 +302,50 @@ describe("getNetWorthOverview", () => {
     );
     expect(overviewA.netWorthCents).toBe(1_000);
     expect(overviewB.netWorthCents).toBe(9_000);
+  });
+
+  test("loan opening stays out of month summary; interest and net worth count", async () => {
+    const owner = await createUser(
+      "overview-loan-opening",
+      "overview-loan-opening@example.com",
+    );
+    const pf = await createEntity(owner.id, { type: "pf", name: "PF" });
+    const loan = await createAccount(owner.id, {
+      name: "Empréstimo",
+      type: "loan",
+      currency: "BRL",
+      entityId: pf.id,
+    });
+    const created = await createLoanWithTerms(owner.id, {
+      accountId: loan.id,
+      principalCents: 800_000,
+      monthlyInterestRate: 0.01,
+      termMonths: 12,
+      firstPaymentDate: "2026-11-10",
+      system: "sac",
+    });
+    expect(created).not.toBeNull();
+
+    await createTransaction(owner.id, {
+      accountId: loan.id,
+      date: "2026-11-15",
+      amountCents: -5_000,
+      description: "Juros",
+    });
+
+    const overview = await getNetWorthOverview(
+      owner.id,
+      "pf",
+      "2026-11-16",
+      offlineFetch,
+    );
+
+    expect(overview.monthSummary).toEqual({
+      inCents: 0,
+      outCents: -5_000,
+      leftCents: -5_000,
+    });
+    expect(overview.netWorthCents).toBe(-805_000);
   });
 
   test("foreign balance uses stored PTAX for the as-of date", async () => {

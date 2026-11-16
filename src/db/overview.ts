@@ -4,6 +4,7 @@ import { convertForeignCentsToBrl } from "@/domain/fx";
 import {
   accountBalanceOnDate,
   buildOverviewLedger,
+  isLoanOpeningEntry,
   monthStartDate,
   monthSummaryCents,
   netWorthCents,
@@ -18,6 +19,7 @@ import { isValuedAccountType } from "@/domain/valuations";
 import { listAccountsWithEntities } from "./accounts";
 import { lookupFxRate, type FxLookupResult } from "./fx-rates";
 import { getDb } from "./index";
+import { listLoanTerms } from "./loans";
 import { transactions, valuations } from "./schema";
 
 export type OverviewFxConversion = {
@@ -330,6 +332,10 @@ async function monthSummaryForScope(
     .from(transactions)
     .where(eq(transactions.userId, userId));
 
+  const termsByAccountId = new Map(
+    (await listLoanTerms(userId)).map((row) => [row.accountId, row]),
+  );
+
   const byTransfer = new Map<string, typeof rows>();
   for (const row of rows) {
     if (!row.transferId) {
@@ -349,6 +355,19 @@ async function monthSummaryForScope(
       continue;
     }
     const account = accountById.get(row.accountId)!;
+    if (
+      isLoanOpeningEntry(
+        {
+          amountCents: row.amountCents,
+          transferId: row.transferId,
+          date: row.date,
+          accountType: account.type,
+        },
+        termsByAccountId.get(row.accountId),
+      )
+    ) {
+      continue;
+    }
     let otherAccountEntityType: "pf" | "pj" | null = null;
     if (row.transferId) {
       const mates = byTransfer.get(row.transferId) ?? [];

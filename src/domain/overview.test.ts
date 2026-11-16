@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import {
   buildOverviewLedger,
   isCompanyToPersonTransfer,
+  isLoanOpeningEntry,
   monthSummaryCents,
   netWorthHistoryDates,
   toNetWorthAccount,
@@ -26,6 +27,42 @@ describe("netWorthHistoryDates", () => {
       "2026-10-31",
       "2026-11-16",
     ]);
+  });
+});
+
+describe("loan opening entry", () => {
+  const terms = {
+    principalCents: 800_000,
+    firstPaymentDate: "2026-11-10",
+  };
+  const opening = {
+    amountCents: -800_000,
+    transferId: null,
+    date: "2026-11-10",
+    accountType: "loan",
+  };
+
+  test("matches principal opening on a loan account", () => {
+    expect(isLoanOpeningEntry(opening, terms)).toBe(true);
+  });
+
+  test("interest charge on the loan is not an opening", () => {
+    expect(
+      isLoanOpeningEntry(
+        {
+          ...opening,
+          amountCents: -5_000,
+          date: "2026-11-15",
+        },
+        terms,
+      ),
+    ).toBe(false);
+  });
+
+  test("transfer legs are not openings", () => {
+    expect(
+      isLoanOpeningEntry({ ...opening, transferId: "t1" }, terms),
+    ).toBe(false);
   });
 });
 

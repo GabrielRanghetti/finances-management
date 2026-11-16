@@ -39,6 +39,28 @@ export type MonthSummaryEntry = {
   otherAccountEntityType: "pf" | "pj" | null;
 };
 
+/**
+ * Loan principal opening: a non-transfer on a loan account whose amount and
+ * date match that account's loan terms. Taking a loan is not spending.
+ */
+export function isLoanOpeningEntry(
+  entry: {
+    amountCents: number;
+    transferId: string | null;
+    date: string;
+    accountType: string;
+  },
+  terms: { principalCents: number; firstPaymentDate: string } | null | undefined,
+): boolean {
+  if (!terms || entry.transferId !== null || entry.accountType !== "loan") {
+    return false;
+  }
+  return (
+    entry.amountCents === -terms.principalCents &&
+    entry.date === terms.firstPaymentDate
+  );
+}
+
 /** Company → person transfer: money in for pf, money out for pj, neither for all. */
 export function isCompanyToPersonTransfer(entry: MonthSummaryEntry): boolean {
   if (!entry.transferId || !entry.otherAccountEntityType) {
