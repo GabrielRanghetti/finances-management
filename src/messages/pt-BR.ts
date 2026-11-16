@@ -16,6 +16,8 @@ export const messages = {
     calendar: "Calendário",
     documents: "Documentos",
     security: "Segurança",
+    more: "Mais",
+    mainAria: "Principal",
   },
   home: {
     title: "Finanças",
