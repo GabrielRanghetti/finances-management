@@ -29,6 +29,40 @@ export function formatCentsToBrl(cents: number): string {
   return `${sign}${wholeFormatted},${fraction}`;
 }
 
+/**
+ * Format cents using the DESIGN.md signed money rules:
+ * positive values start with "+", negative values start with Unicode minus "−",
+ * and zero has no sign.
+ */
+export function formatSignedCentsToBrl(
+  cents: number,
+  withCurrency = false,
+): string {
+  const absFormatted = formatCentsToBrl(Math.abs(cents));
+  if (cents > 0) {
+    return withCurrency ? `+ R$ ${absFormatted}` : `+${absFormatted}`;
+  }
+  if (cents < 0) {
+    return withCurrency ? `− R$ ${absFormatted}` : `−${absFormatted}`;
+  }
+  return withCurrency ? `R$ ${absFormatted}` : absFormatted;
+}
+
+/**
+ * Format a balance or owed amount: non-negative balances have no sign,
+ * while negative (owed/outgoing) amounts start with Unicode minus "−".
+ */
+export function formatBalanceCentsToBrl(
+  cents: number,
+  withCurrency = false,
+): string {
+  const absFormatted = formatCentsToBrl(Math.abs(cents));
+  if (cents < 0) {
+    return withCurrency ? `− R$ ${absFormatted}` : `−${absFormatted}`;
+  }
+  return withCurrency ? `R$ ${absFormatted}` : absFormatted;
+}
+
 export function accountBalanceCents(amounts: readonly number[]): number {
   return amounts.reduce((sum, amount) => sum + amount, 0);
 }
