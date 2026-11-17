@@ -7,12 +7,17 @@ import {
   previewPluggySyncAction,
   type SyncPreviewState,
 } from "../actions";
-import { formatCentsToBrl } from "@/domain/money";
+import { formatSignedCentsToBrl } from "@/domain/money";
 import { messages } from "@/messages/pt-BR";
 
 type Props = {
   connectionId: string;
 };
+
+function formatDdMm(isoDate: string): string {
+  const [, month, day] = isoDate.split("-");
+  return day && month ? `${day}/${month}` : isoDate;
+}
 
 export function SyncPanel({ connectionId }: Props) {
   const previewBound = previewPluggySyncAction.bind(null, connectionId);
@@ -64,10 +69,10 @@ export function SyncPanel({ connectionId }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       <form action={previewAction}>
         <button
-          className="rounded bg-zinc-900 px-4 py-2 text-sm text-white disabled:opacity-50"
+          className={`btn ${groups ? "btn--card" : "btn--ink"}`}
           type="submit"
           disabled={previewPending}
         >
@@ -75,32 +80,50 @@ export function SyncPanel({ connectionId }: Props) {
         </button>
       </form>
 
-      {error ? <p className="text-sm text-red-700">{error}</p> : null}
+      {error ? (
+        <p role="alert" className="neg text-sm font-medium">
+          {error}
+        </p>
+      ) : null}
 
       {groups
         ? groups.map((group) => (
-            <div key={group.accountId} className="flex flex-col gap-2">
-              <h2 className="font-medium">{group.accountName}</h2>
+            <div key={group.accountId} className="flex flex-col gap-3">
+              <h2 className="text-base font-semibold text-foreground">
+                {group.accountName}
+              </h2>
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
+                <table className="tbl">
                   <thead>
-                    <tr className="border-b">
-                      <th className="py-2 pr-2">{messages.imports.include}</th>
-                      <th className="py-2 pr-2">{messages.imports.date}</th>
-                      <th className="py-2 pr-2">{messages.imports.description}</th>
-                      <th className="py-2 pr-2">{messages.imports.amount}</th>
-                      <th className="py-2">{messages.imports.probableDuplicate}</th>
+                    <tr>
+                      <th scope="col">
+                        {messages.screens.importsColumnImport}
+                      </th>
+                      <th scope="col">{messages.imports.date}</th>
+                      <th scope="col">
+                        {messages.screens.importsColumnBankDescription}
+                      </th>
+                      <th scope="col">
+                        {messages.screens.importsColumnStatus}
+                      </th>
+                      <th scope="col" className="num">
+                        {messages.imports.amount}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {group.rows.map((row, index) => (
                       <tr
                         key={`${row.externalId ?? row.description}-${index}`}
-                        className="border-b"
+                        className={row.probableDuplicate ? "dup" : undefined}
                       >
-                        <td className="py-2 pr-2">
+                        <td>
                           <input
+                            className="chk"
                             type="checkbox"
+                            aria-label={messages.screens.importsRowAria(
+                              row.description,
+                            )}
                             checked={isIncluded(
                               group.accountId,
                               index,
@@ -118,15 +141,23 @@ export function SyncPanel({ connectionId }: Props) {
                             }
                           />
                         </td>
-                        <td className="whitespace-nowrap py-2 pr-2">{row.date}</td>
-                        <td className="py-2 pr-2">{row.description}</td>
-                        <td className="whitespace-nowrap py-2 pr-2">
-                          {messages.money(formatCentsToBrl(row.amountCents))}
-                        </td>
-                        <td className="py-2">
+                        <td className="fig">{formatDdMm(row.date)}</td>
+                        <td>{row.description}</td>
+                        <td>
                           {row.probableDuplicate
-                            ? messages.imports.probableDuplicate
-                            : ""}
+                            ? messages.screens.importsStatusDuplicate
+                            : messages.screens.importsStatusNew}
+                        </td>
+                        <td
+                          className={`num fig ${
+                            row.amountCents > 0
+                              ? "pos"
+                              : row.amountCents < 0
+                                ? "neg"
+                                : "text-foreground"
+                          }`}
+                        >
+                          {formatSignedCentsToBrl(row.amountCents)}
                         </td>
                       </tr>
                     ))}
@@ -139,7 +170,7 @@ export function SyncPanel({ connectionId }: Props) {
 
       {groups ? (
         <button
-          className="self-start rounded bg-zinc-900 px-4 py-2 text-sm text-white disabled:opacity-50"
+          className="btn btn--ink self-start"
           type="button"
           disabled={pending}
           onClick={onConfirm}
