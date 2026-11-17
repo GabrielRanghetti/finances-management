@@ -13,21 +13,16 @@ export default function OverviewError({ retry, reset }: ErrorProps) {
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-6 min-[60rem]:px-10 min-[60rem]:py-10">
-      <article
-        role="alert"
-        className="rounded-lg border border-border bg-card p-6 shadow-xs min-[60rem]:p-10"
-      >
-        <h1 className="text-lg font-semibold text-negative">
+      <article role="alert" className="sheet p-6 min-[60rem]:p-10">
+        <h1 className="neg text-lg font-semibold">
           {messages.overview.errorTitle}
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {messages.overview.errorUnchanged}
-        </p>
+        <p className="lbl mt-2">{messages.overview.errorUnchanged}</p>
         <div className="mt-6">
           <button
             type="button"
             onClick={() => handleRetry?.()}
-            className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-[transform,opacity] duration-150 hover:opacity-90 active:translate-y-px min-[60rem]:min-h-10"
+            className="btn btn--ink"
           >
             {messages.overview.errorRetry}
           </button>

@@ -3,8 +3,10 @@ import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeAll, describe, expect, test, vi } from "vitest";
 
-const { getSession } = vi.hoisted(() => ({
+const { getSession, mockPathname, mockSearchParams } = vi.hoisted(() => ({
   getSession: vi.fn(),
+  mockPathname: vi.fn(() => "/app"),
+  mockSearchParams: vi.fn(() => new URLSearchParams()),
 }));
 
 vi.mock("next/headers", () => ({
@@ -15,6 +17,9 @@ vi.mock("next/navigation", () => ({
   redirect: vi.fn(() => {
     throw new Error("NEXT_REDIRECT");
   }),
+  usePathname: () => mockPathname(),
+  useSearchParams: () => mockSearchParams(),
+  useRouter: () => ({ push: vi.fn() }),
 }));
 
 vi.mock("next/link", () => ({
@@ -42,12 +47,14 @@ vi.mock("@/lib/auth", () => ({
   },
 }));
 
+import { AppShell } from "@/components/app-shell";
 import AppHomePage from "./page";
 import { createAccount } from "@/db/accounts";
 import { createEntity } from "@/db/entities";
 import { getDb } from "@/db/index";
 import { user } from "@/db/schema";
 import { createTransaction } from "@/db/transactions";
+import { todayInSaoPaulo } from "@/domain/date";
 
 beforeAll(async () => {
   const db = getDb();
@@ -109,7 +116,7 @@ describe("overview route isolation and scope toggle", () => {
       institution: "Banco Beta Secreto",
     });
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayInSaoPaulo();
     await createTransaction(userA.id, {
       accountId: accountA.id,
       date: today,
@@ -142,50 +149,58 @@ describe("overview route isolation and scope toggle", () => {
     expect(htmlB).not.toContain("Banco Alfa Exclusivo");
   });
 
-  test("renders the three scope links with the active one marked aria-current=true", async () => {
+  test("renders the scope groove in the top bar on scoped pages with aria-pressed on the active option", async () => {
     const viewer = await createUser(
       "overview-scope-links",
       "overview-scope-links@example.com",
     );
     getSession.mockResolvedValue(asSession(viewer));
 
+    mockPathname.mockReturnValue("/app");
+    mockSearchParams.mockReturnValue(new URLSearchParams());
     const defaultHtml = renderToStaticMarkup(
-      await AppHomePage({ searchParams: Promise.resolve({}) }),
+      <AppShell>
+        {await AppHomePage({ searchParams: Promise.resolve({}) })}
+      </AppShell>,
     );
     expect(defaultHtml).toMatch(
-      /<a href="\/app\?scope=pf"[^>]*>Pessoal<\/a>/,
+      /<button type="button" aria-pressed="false">Pessoal<\/button>/,
     );
     expect(defaultHtml).toMatch(
-      /<a href="\/app\?scope=pj"[^>]*>Empresa<\/a>/,
+      /<button type="button" aria-pressed="false">Empresa<\/button>/,
     );
     expect(defaultHtml).toMatch(
-      /<a href="\/app\?scope=all" aria-current="true"[^>]*>Tudo<\/a>/,
+      /<button type="button" aria-pressed="true">Tudo<\/button>/,
     );
 
+    mockSearchParams.mockReturnValue(new URLSearchParams("scope=pf"));
     const pfHtml = renderToStaticMarkup(
-      await AppHomePage({ searchParams: Promise.resolve({ scope: "pf" }) }),
+      <AppShell>
+        {await AppHomePage({ searchParams: Promise.resolve({ scope: "pf" }) })}
+      </AppShell>,
     );
     expect(pfHtml).toMatch(
-      /<a href="\/app\?scope=pf" aria-current="true"[^>]*>Pessoal<\/a>/,
+      /<button type="button" aria-pressed="true">Pessoal<\/button>/,
     );
-    expect(pfHtml).not.toMatch(
-      /<a href="\/app\?scope=pj" aria-current="true"/,
-    );
-    expect(pfHtml).not.toMatch(
-      /<a href="\/app\?scope=all" aria-current="true"/,
-    );
+    expect(pfHtml).toContain("Patrimônio pessoal");
 
+    mockSearchParams.mockReturnValue(new URLSearchParams("scope=pj"));
     const pjHtml = renderToStaticMarkup(
-      await AppHomePage({ searchParams: Promise.resolve({ scope: "pj" }) }),
+      <AppShell>
+        {await AppHomePage({ searchParams: Promise.resolve({ scope: "pj" }) })}
+      </AppShell>,
     );
     expect(pjHtml).toMatch(
-      /<a href="\/app\?scope=pj" aria-current="true"[^>]*>Empresa<\/a>/,
+      /<button type="button" aria-pressed="true">Empresa<\/button>/,
     );
-    expect(pjHtml).not.toMatch(
-      /<a href="\/app\?scope=pf" aria-current="true"/,
+    expect(pjHtml).toContain("Patrimônio da empresa");
+
+    mockPathname.mockReturnValue("/app/connections");
+    const unscopedHtml = renderToStaticMarkup(
+      <AppShell>
+        <div>Connections</div>
+      </AppShell>,
     );
-    expect(pjHtml).not.toMatch(
-      /<a href="\/app\?scope=all" aria-current="true"/,
-    );
+    expect(unscopedHtml).not.toContain('aria-label="De quem é o dinheiro"');
   });
 });

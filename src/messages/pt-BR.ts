@@ -4,11 +4,11 @@ export const messages = {
   emptyValue: "—",
   money: (formattedAmount: string) => `R$ ${formattedAmount}`,
   nav: {
-    dashboard: "Painel",
+    dashboard: "Visão geral",
     entities: "Entidades",
     accounts: "Contas",
     transactions: "Lançamentos",
-    imports: "Importar",
+    imports: "Importações",
     connections: "Conexões",
     investments: "Investimentos",
     budget: "Orçamento",
@@ -18,6 +18,7 @@ export const messages = {
     security: "Segurança",
     more: "Mais",
     mainAria: "Principal",
+    newTransaction: "Novo lançamento",
   },
   home: {
     title: "Finanças",
@@ -278,6 +279,34 @@ export const messages = {
     errorAccounts: "Selecione contas diferentes para a transferência",
     errorInstallments: "Informe um número de parcelas válido",
     errorCreditCard: "Parcelas só podem ser lançadas em cartão de crédito",
+    previousMonthAria: "Mês anterior",
+    nextMonthAria: "Próximo mês",
+    monthHeading: (monthCap: string, year: number | string) =>
+      `${monthCap} de ${year}`,
+    searchPlaceholder: "Buscar",
+    searchAria: "Buscar nos lançamentos",
+    allAccounts: "Todas as contas",
+    allCategories: "Todas as categorias",
+    chooseCategory: "Escolher",
+    uncategorized: "Sem categoria",
+    ownTransferCategory: "Entre contas suas",
+    transferFromTo: (from: string, to: string) => `${from} para ${to}`,
+    descriptionPlaceholder: "Padaria, salário, aluguel",
+    quickAmountPlaceholder: "−0,00",
+    add: "Adicionar",
+    footerTransferNote:
+      "Dinheiro que passa entre contas suas fica fora dessas somas.",
+    emptyMonthTitle: (monthCap: string) =>
+      `${monthCap} ainda não tem lançamentos`,
+    emptyMonthBody:
+      "Digite o primeiro na linha de cima ou traga o extrato do banco.",
+    emptyImportAction: "Importar extrato",
+    emptyTypeAction: "Digitar um lançamento",
+    loadingAria: "Carregando lançamentos",
+    errorTitle: "Não deu para carregar os lançamentos",
+    errorBody:
+      "A conexão com o servidor caiu. Nada do que você já lançou foi alterado.",
+    errorRetry: "Tentar de novo",
   },
   imports: {
     title: "Importar",
@@ -388,5 +417,45 @@ export const messages = {
   },
   placeholders: {
     comingSoon: "Em breve.",
+  },
+  screens: {
+    accountsEmptyBody:
+      "Cadastre contas bancárias, cartões, investimentos, imóveis, veículos ou empréstimos para acompanhar os saldos.",
+    importsSubtitle:
+      "Escolha o formato do arquivo exportado pelo banco para revisar os lançamentos antes de importar.",
+    importsOfxDescription:
+      "Extrato em formato OFX baixado do banco ou cartão.",
+    importsCsvDescription:
+      "Planilha CSV exportada pelo banco, com mapeamento de colunas.",
+    importsPdfDescription: "Extrato em PDF do Itaú.",
+    importsOpenFlow: "Escolher arquivo",
+    importsSelectAccount: "Escolher conta",
+    importsColumnImport: "Importar",
+    importsColumnBankDescription: "Descrição no banco",
+    importsColumnStatus: "Situação",
+    importsStatusNew: "Novo",
+    importsStatusDuplicate: "Já estava aqui",
+    importsReviewCount: (total: number, newCount: number, dupCount: number) =>
+      `O arquivo tem ${total} ${total === 1 ? "lançamento" : "lançamentos"}. ${newCount} ${newCount === 1 ? "é novo" : "são novos"} e ${dupCount} já ${dupCount === 1 ? "estava" : "estavam"} aqui.`,
+    importsRowAria: (description: string) => `Importar ${description}`,
+    importsConfirmCount: (count: number) =>
+      count === 1
+        ? "Importar 1 lançamento"
+        : `Importar ${count} lançamentos`,
+    importsBalanceAfter: "Saldo depois de importar",
+    importsBalanceReported: "Saldo que o banco informa",
+    importsBalancesMatch: "Os dois batem.",
+    importsBalancesMismatch: (diffFormatted: string) =>
+      `Os dois não batem (diferença de R$ ${diffFormatted}).`,
+    connectionsEmptyBody:
+      "Conecte um item do Meu Pluggy para sincronizar contas e lançamentos via Open Finance.",
+    connectionsLoadingAria: "Carregando conexões",
+    connectionsErrorTitle: "Não foi possível carregar as conexões.",
+    connectionsNewAccountName: "Nome da nova conta",
+    connectionsNewAccountType: "Tipo da nova conta",
+    entitiesEmptyBody:
+      "Cadastre suas entidades de pessoa física ou jurídica para separar as contas.",
+    entitiesLoadingAria: "Carregando entidades",
+    entitiesErrorTitle: "Não foi possível carregar as entidades.",
   },
 } as const;

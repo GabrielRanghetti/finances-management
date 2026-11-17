@@ -1,4 +1,4 @@
-import { and, desc, eq, lte } from "drizzle-orm";
+import { and, desc, eq, gte, lte } from "drizzle-orm";
 
 import {
   fetchCotacaoMoedaPeriodo,
@@ -35,6 +35,8 @@ export type FxLookupMissing = {
 export type FxLookupResult = FxLookupOk | FxLookupStale | FxLookupMissing;
 
 const LOOKBACK_DAYS = 14;
+// Accept a stored rate at most a weekend+holiday earlier; older means refetch.
+const MAX_STORED_AGE_DAYS = 4;
 
 /** Trim trailing zeros that numeric(18,8) adds on read. */
 export function normalizeRateString(rate: string): string {
@@ -68,6 +70,7 @@ function addDaysIso(isoDate: string, days: number): string {
 async function findRateOnOrBefore(
   currency: string,
   date: string,
+  minDate?: string,
 ): Promise<StoredFxRate | null> {
   const rows = await getDb()
     .select({
@@ -78,7 +81,11 @@ async function findRateOnOrBefore(
     })
     .from(fxRates)
     .where(
-      and(eq(fxRates.currency, currency), lte(fxRates.date, date)),
+      and(
+        eq(fxRates.currency, currency),
+        lte(fxRates.date, date),
+        minDate ? gte(fxRates.date, minDate) : undefined,
+      ),
     )
     .orderBy(desc(fxRates.date))
     .limit(1);
@@ -150,7 +157,11 @@ export async function lookupFxRate(
     };
   }
 
-  const stored = await findRateOnOrBefore(code, date);
+  const stored = await findRateOnOrBefore(
+    code,
+    date,
+    addDaysIso(date, -MAX_STORED_AGE_DAYS),
+  );
   if (stored) {
     return {
       kind: "ok",

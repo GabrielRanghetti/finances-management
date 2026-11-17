@@ -25,6 +25,19 @@ function statusLabel(status: string) {
   return messages.connections.statusActive;
 }
 
+function formatSyncDate(date: Date): string {
+  const parts = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).formatToParts(date);
+  const day = parts.find((p) => p.type === "day")?.value ?? "";
+  const month = parts.find((p) => p.type === "month")?.value ?? "";
+  const year = parts.find((p) => p.type === "year")?.value ?? "";
+  return `${day}/${month}/${year}`;
+}
+
 export default async function ConnectionDetailPage({
   params,
   searchParams,
@@ -48,48 +61,64 @@ export default async function ConnectionDetailPage({
   const synced = query.synced ? Number(query.synced) : null;
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">
-          {connection.provider} · {entity?.name ?? messages.emptyValue}
-        </h1>
-        <Link className="text-sm underline" href="/app/connections">
-          {messages.connections.cancel}
-        </Link>
-      </div>
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-6 min-[60rem]:px-10 min-[60rem]:py-10">
+      <article className="sheet p-6 min-[60rem]:p-10">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">
+            {connection.provider} · {entity?.name ?? messages.emptyValue}
+          </h1>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              className={`btn ${maps.length === 0 ? "btn--ink" : "btn--card"}`}
+              href={`/app/connections/${connection.id}/map`}
+            >
+              {messages.connections.mapAccounts}
+            </Link>
+            <Link className="btn btn--card" href="/app/connections">
+              {messages.connections.cancel}
+            </Link>
+          </div>
+        </div>
 
-      <dl className="grid gap-2 text-sm">
-        <div>
-          <dt className="font-medium">{messages.connections.status}</dt>
-          <dd>{statusLabel(connection.status)}</dd>
-        </div>
-        <div>
-          <dt className="font-medium">{messages.connections.lastSync}</dt>
-          <dd>
-            {connection.lastSyncAt
-              ? connection.lastSyncAt.toISOString()
-              : messages.emptyValue}
-          </dd>
-        </div>
-        {connection.lastError ? (
+        <dl className="mt-6 grid grid-cols-1 gap-4 border-t border-border pt-6 text-sm sm:grid-cols-2 min-[60rem]:grid-cols-3">
           <div>
-            <dt className="font-medium">{messages.connections.lastError}</dt>
-            <dd className="text-red-700">{connection.lastError}</dd>
+            <dt className="lbl">{messages.connections.status}</dt>
+            <dd
+              className={`mt-0.5 font-medium ${
+                connection.status === "error" || connection.status === "expired"
+                  ? "neg"
+                  : "text-foreground"
+              }`}
+            >
+              {statusLabel(connection.status)}
+            </dd>
+          </div>
+          <div>
+            <dt className="lbl">{messages.connections.lastSync}</dt>
+            <dd className="fig mt-0.5 font-medium text-foreground">
+              {connection.lastSyncAt
+                ? formatSyncDate(connection.lastSyncAt)
+                : messages.emptyValue}
+            </dd>
+          </div>
+          {connection.lastError ? (
+            <div>
+              <dt className="lbl">{messages.connections.lastError}</dt>
+              <dd className="neg mt-0.5 font-medium">{connection.lastError}</dd>
+            </div>
+          ) : null}
+        </dl>
+
+        {synced !== null && Number.isFinite(synced) ? (
+          <p className="lbl mt-4">{messages.connections.synced(synced)}</p>
+        ) : null}
+
+        {maps.length > 0 ? (
+          <div className="mt-8 border-t border-border pt-6">
+            <SyncPanel connectionId={connection.id} />
           </div>
         ) : null}
-      </dl>
-
-      {synced !== null && Number.isFinite(synced) ? (
-        <p className="text-sm">{messages.connections.synced(synced)}</p>
-      ) : null}
-
-      <div className="flex flex-wrap gap-3 text-sm">
-        <Link className="underline" href={`/app/connections/${connection.id}/map`}>
-          {messages.connections.mapAccounts}
-        </Link>
-      </div>
-
-      {maps.length > 0 ? <SyncPanel connectionId={connection.id} /> : null}
+      </article>
     </main>
   );
 }

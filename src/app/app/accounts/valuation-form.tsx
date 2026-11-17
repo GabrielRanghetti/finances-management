@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 
+import { todayInSaoPaulo } from "@/domain/date";
 import { messages } from "@/messages/pt-BR";
 
 type FormState = { error?: string } | undefined;
@@ -18,40 +19,50 @@ type Props = {
 
 export function ValuationForm({ accountId, action, defaults }: Props) {
   const [state, formAction] = useActionState(action, undefined);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInSaoPaulo();
 
   return (
-    <form action={formAction} className="flex flex-col gap-3">
-      <label className="flex flex-col gap-1 text-sm">
-        {messages.accounts.valuationDate}
+    <form action={formAction} className="flex flex-col gap-4">
+      <div className="field">
+        <label className="lbl" htmlFor="val-date">
+          {messages.accounts.valuationDate}
+        </label>
         <input
-          className="rounded border px-3 py-2"
+          id="val-date"
+          className="inp"
           type="date"
           name="date"
           required
           defaultValue={defaults?.date ?? today}
         />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        {messages.accounts.valuationValue}
+      </div>
+
+      <div className="field">
+        <label className="lbl" htmlFor="val-value">
+          {messages.accounts.valuationValue}
+        </label>
         <input
-          className="rounded border px-3 py-2"
+          id="val-value"
+          className="inp fig"
           name="value"
           required
           placeholder={messages.transactions.amountPlaceholder}
           inputMode="decimal"
           defaultValue={defaults?.value ?? ""}
         />
-      </label>
-      {state?.error ? <p className="text-sm text-red-700">{state.error}</p> : null}
-      <div className="flex gap-3">
-        <button className="rounded bg-black px-3 py-2 text-white" type="submit">
+      </div>
+
+      {state?.error ? (
+        <p role="alert" className="neg text-sm">
+          {state.error}
+        </p>
+      ) : null}
+
+      <div className="mt-2 flex flex-wrap gap-3">
+        <button className="btn btn--ink" type="submit">
           {messages.accounts.save}
         </button>
-        <Link
-          className="self-center underline"
-          href={`/app/accounts/${accountId}`}
-        >
+        <Link className="btn btn--card" href={`/app/accounts/${accountId}`}>
           {messages.accounts.cancel}
         </Link>
       </div>

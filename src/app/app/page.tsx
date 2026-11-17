@@ -2,7 +2,12 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { getNetWorthOverview, type OverviewHistoryPoint } from "@/db/overview";
+import {
+  getNetWorthOverview,
+  type OverviewHistoryPoint,
+  type OverviewMonthSummary,
+} from "@/db/overview";
+import { todayInSaoPaulo } from "@/domain/date";
 import {
   formatBalanceCentsToBrl,
   formatSignedCentsToBrl,
@@ -71,16 +76,16 @@ function formatRatePtBr(rate: string): string {
 
 function signedColorClass(cents: number): string {
   if (cents > 0) {
-    return "text-positive";
+    return "pos";
   }
   if (cents < 0) {
-    return "text-negative";
+    return "neg";
   }
   return "text-foreground";
 }
 
 function balanceColorClass(cents: number): string {
-  return cents < 0 ? "text-negative" : "text-foreground";
+  return cents < 0 ? "neg" : "text-foreground";
 }
 
 function accountClassLabel(accountClass: string): string {
@@ -88,7 +93,10 @@ function accountClassLabel(accountClass: string): string {
   return types[accountClass] ?? accountClass;
 }
 
-function computeChartGeometry(points: readonly OverviewHistoryPoint[]) {
+function computeChartGeometry(
+  points: readonly OverviewHistoryPoint[],
+  box: { xStart: number; xEnd: number; yTop: number; yBottom: number },
+) {
   const values =
     points.length > 0 ? points.map((point) => point.netWorthCents) : [0];
   const minVal = Math.min(...values);
@@ -108,10 +116,7 @@ function computeChartGeometry(points: readonly OverviewHistoryPoint[]) {
   const mid = Math.round((lo + hi) / 2);
   const span = hi - lo || 1;
 
-  const yTop = 16;
-  const yBottom = 140;
-  const xStart = 8;
-  const xEnd = 632;
+  const { xStart, xEnd, yTop, yBottom } = box;
   const count = Math.max(points.length, 1);
 
   const coords = points.map((point, index) => {
@@ -141,6 +146,47 @@ function computeChartGeometry(points: readonly OverviewHistoryPoint[]) {
   };
 }
 
+function MonthSummaryBlock({
+  monthSummary,
+  scope,
+}: {
+  monthSummary: OverviewMonthSummary;
+  scope: OverviewScope;
+}) {
+  return (
+    <>
+      <h2 className="text-base font-semibold text-foreground">
+        {messages.overview.monthSummaryTitle}
+      </h2>
+      <dl className="mt-3 flex flex-col gap-2 text-sm">
+        <div className="row">
+          <dt className="text-muted-foreground">{messages.overview.moneyIn}</dt>
+          <dd className={`fig ${signedColorClass(monthSummary.inCents)}`}>
+            {formatSignedCentsToBrl(monthSummary.inCents, true)}
+          </dd>
+        </div>
+        <div className="row">
+          <dt className="text-muted-foreground">
+            {messages.overview.moneyOut}
+          </dt>
+          <dd className={`fig ${balanceColorClass(monthSummary.outCents)}`}>
+            {formatBalanceCentsToBrl(monthSummary.outCents, true)}
+          </dd>
+        </div>
+        <div className="row border-t border-border pt-2 font-semibold">
+          <dt className="text-foreground">{messages.overview.moneyLeft}</dt>
+          <dd className={`fig ${signedColorClass(monthSummary.leftCents)}`}>
+            {formatSignedCentsToBrl(monthSummary.leftCents, true)}
+          </dd>
+        </div>
+      </dl>
+      <p className="mt-3 text-xs font-medium text-muted-foreground">
+        {scopeTransferNote(scope)}
+      </p>
+    </>
+  );
+}
+
 export default async function AppHomePage({ searchParams }: Props = {}) {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -152,97 +198,72 @@ export default async function AppHomePage({ searchParams }: Props = {}) {
 
   const params = searchParams ? await searchParams : {};
   const scope = parseScope(params.scope);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInSaoPaulo();
   const overview = await getNetWorthOverview(session.user.id, scope, today);
   const title = scopeTitle(overview.scope);
 
-  const scopeLinks: { value: OverviewScope; label: string; href: string }[] = [
-    {
-      value: "pf",
-      label: messages.overview.scopePf,
-      href: "/app?scope=pf",
-    },
-    {
-      value: "pj",
-      label: messages.overview.scopePj,
-      href: "/app?scope=pj",
-    },
-    {
-      value: "all",
-      label: messages.overview.scopeAll,
-      href: "/app?scope=all",
-    },
-  ];
-
-  const chart = computeChartGeometry(overview.history);
+  const desktopChart = computeChartGeometry(overview.history, {
+    xStart: 104,
+    xEnd: 632,
+    yTop: 16,
+    yBottom: 140,
+  });
+  const mobileChart = computeChartGeometry(overview.history, {
+    xStart: 96,
+    xEnd: 294,
+    yTop: 16,
+    yBottom: 124,
+  });
   const firstPointCents = overview.history[0]?.netWorthCents ?? 0;
   const lastPointCents =
     overview.history[overview.history.length - 1]?.netWorthCents ??
     overview.netWorthCents;
+  const chartAriaLabel = messages.overview.chartAria(
+    title,
+    formatBalanceCentsToBrl(firstPointCents, true),
+    formatBalanceCentsToBrl(lastPointCents, true),
+  );
+  const mobileLabelIndices = new Set([
+    0,
+    2,
+    4,
+    6,
+    8,
+    Math.max(mobileChart.coords.length - 1, 0),
+  ]);
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-6 min-[60rem]:px-10 min-[60rem]:py-10">
-      <div className="flex items-center justify-between">
-        <div
-          role="group"
-          aria-label={messages.overview.scopeAria}
-          className="inline-flex w-full rounded-lg bg-secondary p-1 min-[60rem]:w-auto"
-        >
-          {scopeLinks.map((item) => {
-            const active = overview.scope === item.value;
-            return (
-              <Link
-                key={item.value}
-                href={item.href}
-                aria-current={active ? "true" : undefined}
-                className={`inline-flex min-h-11 flex-1 items-center justify-center rounded-md px-4 text-sm font-medium no-underline transition-opacity duration-150 min-[60rem]:min-h-9 min-[60rem]:flex-initial ${
-                  active
-                    ? "bg-card text-foreground shadow-xs"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </div>
-      </div>
-
       {!overview.hasAccounts ? (
-        <article className="rounded-lg border border-border bg-card p-6 shadow-xs min-[60rem]:p-10">
+        <article className="sheet p-6 min-[60rem]:p-10">
           <h1 className="text-xl font-semibold text-foreground">{title}</h1>
-          <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-            {messages.overview.emptyBody}
-          </p>
+          <p className="lbl mt-2 max-w-xl">{messages.overview.emptyBody}</p>
           <div className="mt-6">
-            <Link
-              href="/app/accounts/new"
-              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground no-underline transition-[transform,opacity] duration-150 hover:opacity-90 active:translate-y-px min-[60rem]:min-h-10"
-            >
+            <Link href="/app/accounts/new" className="btn btn--ink">
               {messages.overview.emptyAction}
             </Link>
           </div>
         </article>
       ) : (
-        <div className="flex flex-col gap-8 min-[60rem]:flex-row min-[60rem]:items-start min-[60rem]:gap-10">
-          <article className="min-w-0 flex-1 rounded-lg border border-border bg-card p-5 shadow-xs min-[60rem]:p-10">
+        <div className="flex flex-col gap-6 min-[60rem]:flex-row min-[60rem]:items-start min-[60rem]:gap-10">
+          <article className="sheet min-w-0 flex-1 p-5 min-[60rem]:px-12 min-[60rem]:pt-10 min-[60rem]:pb-8">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">
+              <p className="lbl">
                 {messages.overview.headingWithDate(
                   title,
                   formatFullDatePtBr(overview.asOfDate),
                 )}
               </p>
               <h1
-                className={`mt-1 font-mono text-4xl font-semibold tracking-tight tabular-nums break-words min-[60rem]:text-5xl ${balanceColorClass(
+                className={`fig mt-1 text-[2.5rem] leading-[1.15] font-semibold tracking-tight break-words whitespace-normal min-[60rem]:text-[3.5rem] min-[60rem]:leading-[1.1] ${balanceColorClass(
                   overview.netWorthCents,
                 )}`}
               >
                 {formatBalanceCentsToBrl(overview.netWorthCents, true)}
               </h1>
-              <p className="mt-2 text-sm text-foreground">
+              <p className="mt-1 text-sm text-foreground min-[60rem]:mt-2 min-[60rem]:text-base">
                 <span
-                  className={`font-mono tabular-nums ${signedColorClass(
+                  className={`fig ${signedColorClass(
                     overview.changeMonthCents,
                   )}`}
                 >
@@ -252,7 +273,7 @@ export default async function AppHomePage({ searchParams }: Props = {}) {
                   formatMonthFullName(overview.asOfDate),
                 )}{" "}
                 <span
-                  className={`font-mono tabular-nums ${signedColorClass(
+                  className={`fig ${signedColorClass(
                     overview.change12MonthsCents,
                   )}`}
                 >
@@ -262,15 +283,12 @@ export default async function AppHomePage({ searchParams }: Props = {}) {
               </p>
             </div>
 
+            {/* Desktop chart (640x170 viewBox) */}
             <svg
               viewBox="0 0 640 170"
               role="img"
-              aria-label={messages.overview.chartAria(
-                title,
-                formatBalanceCentsToBrl(firstPointCents, true),
-                formatBalanceCentsToBrl(lastPointCents, true),
-              )}
-              className="mt-8 block h-auto w-full"
+              aria-label={chartAriaLabel}
+              className="mt-8 hidden h-auto w-full min-[60rem]:block"
             >
               <line
                 x1="0"
@@ -296,41 +314,41 @@ export default async function AppHomePage({ searchParams }: Props = {}) {
               <text
                 x="0"
                 y="11"
-                className="fill-muted-foreground font-mono text-[11px]"
+                className="fill-muted-foreground font-sans text-[11px] tabular-nums"
               >
-                {formatBalanceCentsToBrl(chart.hi, true)}
+                {formatBalanceCentsToBrl(desktopChart.hi, true)}
               </text>
               <text
                 x="0"
                 y="73"
-                className="fill-muted-foreground font-mono text-[11px]"
+                className="fill-muted-foreground font-sans text-[11px] tabular-nums"
               >
-                {formatBalanceCentsToBrl(chart.mid, true)}
+                {formatBalanceCentsToBrl(desktopChart.mid, true)}
               </text>
               <text
                 x="0"
                 y="135"
-                className="fill-muted-foreground font-mono text-[11px]"
+                className="fill-muted-foreground font-sans text-[11px] tabular-nums"
               >
-                {formatBalanceCentsToBrl(chart.lo, true)}
+                {formatBalanceCentsToBrl(desktopChart.lo, true)}
               </text>
               <polyline
-                points={chart.polylinePoints}
+                points={desktopChart.polylinePoints}
                 className="fill-none stroke-foreground stroke-2"
                 strokeLinejoin="round"
                 strokeLinecap="round"
               />
               <circle
-                cx={chart.lastCoord.x}
-                cy={chart.lastCoord.y}
+                cx={desktopChart.lastCoord.x}
+                cy={desktopChart.lastCoord.y}
                 r="4"
                 className="fill-foreground"
               />
-              {chart.coords.map((pt, idx) => {
+              {desktopChart.coords.map((pt, idx) => {
                 const anchor =
                   idx === 0
                     ? "start"
-                    : idx === chart.coords.length - 1
+                    : idx === desktopChart.coords.length - 1
                       ? "end"
                       : "middle";
                 return (
@@ -346,28 +364,114 @@ export default async function AppHomePage({ searchParams }: Props = {}) {
                 );
               })}
             </svg>
-            <p className="mt-1 text-sm font-medium text-muted-foreground">
-              {chart.lo !== 0
+
+            {/* Phone chart (300x150 viewBox so 11px text stays >= 11px at 390px) */}
+            <svg
+              viewBox="0 0 300 150"
+              role="img"
+              aria-label={chartAriaLabel}
+              className="mt-4 block h-auto w-full min-[60rem]:hidden"
+            >
+              <line
+                x1="0"
+                y1="16"
+                x2="300"
+                y2="16"
+                className="stroke-border stroke-1"
+              />
+              <line
+                x1="0"
+                y1="70"
+                x2="300"
+                y2="70"
+                className="stroke-border stroke-1"
+              />
+              <line
+                x1="0"
+                y1="124"
+                x2="300"
+                y2="124"
+                className="stroke-border stroke-1"
+              />
+              <text
+                x="0"
+                y="11"
+                className="fill-muted-foreground font-sans text-[11px] tabular-nums"
+              >
+                {formatBalanceCentsToBrl(mobileChart.hi, true)}
+              </text>
+              <text
+                x="0"
+                y="65"
+                className="fill-muted-foreground font-sans text-[11px] tabular-nums"
+              >
+                {formatBalanceCentsToBrl(mobileChart.mid, true)}
+              </text>
+              <text
+                x="0"
+                y="119"
+                className="fill-muted-foreground font-sans text-[11px] tabular-nums"
+              >
+                {formatBalanceCentsToBrl(mobileChart.lo, true)}
+              </text>
+              <polyline
+                points={mobileChart.polylinePoints}
+                className="fill-none stroke-foreground stroke-2"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+              <circle
+                cx={mobileChart.lastCoord.x}
+                cy={mobileChart.lastCoord.y}
+                r="4"
+                className="fill-foreground"
+              />
+              {mobileChart.coords.map((pt, idx) => {
+                if (!mobileLabelIndices.has(idx)) {
+                  return null;
+                }
+                const anchor =
+                  idx === 0
+                    ? "start"
+                    : idx === mobileChart.coords.length - 1
+                      ? "end"
+                      : "middle";
+                return (
+                  <text
+                    key={pt.date || idx}
+                    x={pt.x}
+                    y="144"
+                    textAnchor={anchor}
+                    className="fill-muted-foreground font-sans text-[11px]"
+                  >
+                    {formatMonthShortName(pt.date)}
+                  </text>
+                );
+              })}
+            </svg>
+
+            <p className="lbl mt-1 text-xs min-[60rem]:text-sm">
+              {desktopChart.lo !== 0
                 ? messages.overview.chartCaptionNonZero(
-                    formatBalanceCentsToBrl(chart.lo, true),
+                    formatBalanceCentsToBrl(desktopChart.lo, true),
                   )
                 : messages.overview.chartCaptionZero}
             </p>
 
-            <div className="mt-8 overflow-x-auto">
-              <table className="w-full border-collapse text-sm">
+            {/* Phone order: Net worth -> Month summary -> Tables */}
+            <section className="mt-6 border-t border-border pt-5 min-[60rem]:hidden">
+              <MonthSummaryBlock
+                monthSummary={overview.monthSummary}
+                scope={overview.scope}
+              />
+            </section>
+
+            <div className="mt-6 overflow-x-auto min-[60rem]:mt-8">
+              <table className="tbl">
                 <thead>
                   <tr>
-                    <th
-                      scope="col"
-                      className="border-b border-border py-3 text-left text-sm font-medium whitespace-nowrap text-muted-foreground"
-                    >
-                      {messages.overview.whatYouHave}
-                    </th>
-                    <th
-                      scope="col"
-                      className="border-b border-border py-3 text-right text-sm font-medium whitespace-nowrap text-muted-foreground"
-                    >
+                    <th scope="col">{messages.overview.whatYouHave}</th>
+                    <th scope="col" className="num">
                       {messages.overview.valueInBrl}
                     </th>
                   </tr>
@@ -375,21 +479,16 @@ export default async function AppHomePage({ searchParams }: Props = {}) {
                 <tbody>
                   {overview.ledger.assets.length === 0 ? (
                     <tr>
-                      <td
-                        colSpan={2}
-                        className="border-b border-border py-3 text-muted-foreground"
-                      >
+                      <td colSpan={2} className="text-muted-foreground">
                         {messages.overview.emptyClassRow}
                       </td>
                     </tr>
                   ) : (
                     overview.ledger.assets.map((row) => (
                       <tr key={row.accountClass}>
-                        <td className="border-b border-border py-3">
-                          {accountClassLabel(row.accountClass)}
-                        </td>
+                        <td>{accountClassLabel(row.accountClass)}</td>
                         <td
-                          className={`border-b border-border py-3 text-right font-mono tabular-nums ${balanceColorClass(
+                          className={`num fig ${balanceColorClass(
                             row.balanceCents,
                           )}`}
                         >
@@ -398,12 +497,10 @@ export default async function AppHomePage({ searchParams }: Props = {}) {
                       </tr>
                     ))
                   )}
-                  <tr className="font-semibold">
-                    <td className="border-b border-border py-3">
-                      {messages.overview.whatYouHaveTotal}
-                    </td>
+                  <tr className="sum">
+                    <td>{messages.overview.whatYouHaveTotal}</td>
                     <td
-                      className={`border-b border-border py-3 text-right font-mono tabular-nums ${balanceColorClass(
+                      className={`num fig ${balanceColorClass(
                         overview.ledger.assetsTotalCents,
                       )}`}
                     >
@@ -416,16 +513,10 @@ export default async function AppHomePage({ searchParams }: Props = {}) {
 
                 <thead>
                   <tr>
-                    <th
-                      scope="col"
-                      className="border-b border-border pt-6 pb-3 text-left text-sm font-medium whitespace-nowrap text-muted-foreground"
-                    >
+                    <th scope="col" className="pt-6">
                       {messages.overview.whatYouOwe}
                     </th>
-                    <th
-                      scope="col"
-                      className="border-b border-border pt-6 pb-3 text-right text-sm font-medium whitespace-nowrap text-muted-foreground"
-                    >
+                    <th scope="col" className="num pt-6">
                       {messages.overview.valueInBrl}
                     </th>
                   </tr>
@@ -433,21 +524,16 @@ export default async function AppHomePage({ searchParams }: Props = {}) {
                 <tbody>
                   {overview.ledger.liabilities.length === 0 ? (
                     <tr>
-                      <td
-                        colSpan={2}
-                        className="border-b border-border py-3 text-muted-foreground"
-                      >
+                      <td colSpan={2} className="text-muted-foreground">
                         {messages.overview.emptyClassRow}
                       </td>
                     </tr>
                   ) : (
                     overview.ledger.liabilities.map((row) => (
                       <tr key={row.accountClass}>
-                        <td className="border-b border-border py-3">
-                          {accountClassLabel(row.accountClass)}
-                        </td>
+                        <td>{accountClassLabel(row.accountClass)}</td>
                         <td
-                          className={`border-b border-border py-3 text-right font-mono tabular-nums ${balanceColorClass(
+                          className={`num fig ${balanceColorClass(
                             row.balanceCents,
                           )}`}
                         >
@@ -456,12 +542,10 @@ export default async function AppHomePage({ searchParams }: Props = {}) {
                       </tr>
                     ))
                   )}
-                  <tr className="font-semibold">
-                    <td className="border-b border-border py-3">
-                      {messages.overview.whatYouOweTotal}
-                    </td>
+                  <tr className="sum">
+                    <td>{messages.overview.whatYouOweTotal}</td>
                     <td
-                      className={`border-b border-border py-3 text-right font-mono tabular-nums ${balanceColorClass(
+                      className={`num fig ${balanceColorClass(
                         overview.ledger.liabilitiesTotalCents,
                       )}`}
                     >
@@ -470,12 +554,10 @@ export default async function AppHomePage({ searchParams }: Props = {}) {
                       )}
                     </td>
                   </tr>
-                  <tr className="font-semibold">
-                    <td className="border-t-2 border-foreground pt-4">
-                      {title}
-                    </td>
+                  <tr className="net">
+                    <td>{title}</td>
                     <td
-                      className={`border-t-2 border-foreground pt-4 text-right font-mono tabular-nums ${balanceColorClass(
+                      className={`num fig ${balanceColorClass(
                         overview.ledger.netTotalCents,
                       )}`}
                     >
@@ -494,25 +576,14 @@ export default async function AppHomePage({ searchParams }: Props = {}) {
                 {messages.overview.byCurrencyTitle}
               </h2>
               <div className="mt-2 overflow-x-auto">
-                <table className="w-full border-collapse text-sm">
+                <table className="tbl">
                   <thead>
                     <tr>
-                      <th
-                        scope="col"
-                        className="border-b border-border py-2.5 text-left text-sm font-medium whitespace-nowrap text-muted-foreground"
-                      >
-                        {messages.overview.currencyHeader}
-                      </th>
-                      <th
-                        scope="col"
-                        className="border-b border-border py-2.5 text-right text-sm font-medium whitespace-nowrap text-muted-foreground"
-                      >
+                      <th scope="col">{messages.overview.currencyHeader}</th>
+                      <th scope="col" className="num">
                         {messages.overview.originalBalanceHeader}
                       </th>
-                      <th
-                        scope="col"
-                        className="border-b border-border py-2.5 text-right text-sm font-medium whitespace-nowrap text-muted-foreground"
-                      >
+                      <th scope="col" className="num">
                         {messages.overview.valueInBrl}
                       </th>
                     </tr>
@@ -520,18 +591,16 @@ export default async function AppHomePage({ searchParams }: Props = {}) {
                   <tbody>
                     {overview.byCurrency.map((row) => (
                       <tr key={row.currency}>
-                        <td className="border-b border-border py-2.5">
-                          {row.currency}
-                        </td>
+                        <td>{row.currency}</td>
                         <td
-                          className={`border-b border-border py-2.5 text-right font-mono tabular-nums ${balanceColorClass(
+                          className={`num fig ${balanceColorClass(
                             row.originalCents,
                           )}`}
                         >
                           {formatBalanceCentsToBrl(row.originalCents)}
                         </td>
                         <td
-                          className={`border-b border-border py-2.5 text-right font-mono tabular-nums ${balanceColorClass(
+                          className={`num fig ${balanceColorClass(
                             row.brlCents,
                           )}`}
                         >
@@ -549,19 +618,11 @@ export default async function AppHomePage({ searchParams }: Props = {}) {
                 {messages.overview.byInstitutionTitle}
               </h2>
               <div className="mt-2 overflow-x-auto">
-                <table className="w-full border-collapse text-sm">
+                <table className="tbl">
                   <thead>
                     <tr>
-                      <th
-                        scope="col"
-                        className="border-b border-border py-2.5 text-left text-sm font-medium whitespace-nowrap text-muted-foreground"
-                      >
-                        {messages.overview.institutionHeader}
-                      </th>
-                      <th
-                        scope="col"
-                        className="border-b border-border py-2.5 text-right text-sm font-medium whitespace-nowrap text-muted-foreground"
-                      >
+                      <th scope="col">{messages.overview.institutionHeader}</th>
+                      <th scope="col" className="num">
                         {messages.overview.valueInBrl}
                       </th>
                     </tr>
@@ -572,11 +633,9 @@ export default async function AppHomePage({ searchParams }: Props = {}) {
                         row.institution ?? messages.overview.noInstitution;
                       return (
                         <tr key={label}>
-                          <td className="border-b border-border py-2.5">
-                            {label}
-                          </td>
+                          <td>{label}</td>
                           <td
-                            className={`border-b border-border py-2.5 text-right font-mono tabular-nums ${balanceColorClass(
+                            className={`num fig ${balanceColorClass(
                               row.brlCents,
                             )}`}
                           >
@@ -592,60 +651,11 @@ export default async function AppHomePage({ searchParams }: Props = {}) {
           </article>
 
           <aside className="flex w-full flex-col gap-6 min-[60rem]:w-80 min-[60rem]:shrink-0">
-            <section className="border-b border-border pb-6">
-              <h2 className="text-base font-semibold text-foreground">
-                {messages.overview.monthSummaryTitle}
-              </h2>
-              <dl className="mt-3 flex flex-col gap-2 text-sm">
-                <div className="flex items-baseline justify-between gap-4">
-                  <dt className="text-muted-foreground">
-                    {messages.overview.moneyIn}
-                  </dt>
-                  <dd
-                    className={`font-mono tabular-nums ${signedColorClass(
-                      overview.monthSummary.inCents,
-                    )}`}
-                  >
-                    {formatSignedCentsToBrl(
-                      overview.monthSummary.inCents,
-                      true,
-                    )}
-                  </dd>
-                </div>
-                <div className="flex items-baseline justify-between gap-4">
-                  <dt className="text-muted-foreground">
-                    {messages.overview.moneyOut}
-                  </dt>
-                  <dd
-                    className={`font-mono tabular-nums ${balanceColorClass(
-                      overview.monthSummary.outCents,
-                    )}`}
-                  >
-                    {formatBalanceCentsToBrl(
-                      overview.monthSummary.outCents,
-                      true,
-                    )}
-                  </dd>
-                </div>
-                <div className="flex items-baseline justify-between gap-4 border-t border-border pt-2 font-semibold">
-                  <dt className="text-foreground">
-                    {messages.overview.moneyLeft}
-                  </dt>
-                  <dd
-                    className={`font-mono tabular-nums ${signedColorClass(
-                      overview.monthSummary.leftCents,
-                    )}`}
-                  >
-                    {formatSignedCentsToBrl(
-                      overview.monthSummary.leftCents,
-                      true,
-                    )}
-                  </dd>
-                </div>
-              </dl>
-              <p className="mt-3 text-xs font-medium text-muted-foreground">
-                {scopeTransferNote(overview.scope)}
-              </p>
+            <section className="hidden border-b border-border pb-6 min-[60rem]:block">
+              <MonthSummaryBlock
+                monthSummary={overview.monthSummary}
+                scope={overview.scope}
+              />
             </section>
 
             <section className="border-b border-border pb-6">
@@ -674,7 +684,7 @@ export default async function AppHomePage({ searchParams }: Props = {}) {
                             )}
                           </span>
                         </div>
-                        <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                        <span className="fig text-xs text-muted-foreground">
                           {messages.overview.fxRateValue(
                             formatRatePtBr(conv.buyRate),
                             formatRatePtBr(conv.sellRate),
@@ -695,7 +705,7 @@ export default async function AppHomePage({ searchParams }: Props = {}) {
 
                   {overview.excludedAccounts.length > 0 ? (
                     <div className="mt-1 border-t border-border pt-2">
-                      <p className="text-xs font-medium text-negative">
+                      <p className="neg text-xs font-medium">
                         {messages.overview.fxExcludedTitle}:{" "}
                         {overview.excludedAccounts
                           .map(

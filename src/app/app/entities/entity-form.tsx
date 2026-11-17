@@ -24,20 +24,20 @@ export function EntityForm({ action, defaults }: Props) {
   const [state, formAction] = useActionState(action, undefined);
 
   return (
-    <form action={formAction} className="flex flex-col gap-3">
-      <label className="flex flex-col gap-1 text-sm">
-        {messages.entities.name}
+    <form action={formAction} className="flex flex-col gap-4">
+      <label className="field">
+        <span className="lbl">{messages.entities.name}</span>
         <input
-          className="rounded border px-3 py-2"
+          className="inp"
           name="name"
           required
           defaultValue={defaults?.name ?? ""}
         />
       </label>
-      <label className="flex flex-col gap-1 text-sm">
-        {messages.entities.type}
+      <label className="field">
+        <span className="lbl">{messages.entities.type}</span>
         <select
-          className="rounded border px-3 py-2"
+          className="inp"
           name="type"
           required
           defaultValue={defaults?.type ?? "pf"}
@@ -46,20 +46,24 @@ export function EntityForm({ action, defaults }: Props) {
           <option value="pj">{messages.entities.typePj}</option>
         </select>
       </label>
-      <label className="flex flex-col gap-1 text-sm">
-        {messages.entities.documentNumber}
+      <label className="field">
+        <span className="lbl">{messages.entities.documentNumber}</span>
         <input
-          className="rounded border px-3 py-2"
+          className="inp fig"
           name="documentNumber"
           defaultValue={defaults?.documentNumber ?? ""}
         />
       </label>
-      {state?.error ? <p className="text-sm text-red-700">{state.error}</p> : null}
-      <div className="flex gap-3">
-        <button className="rounded bg-black px-3 py-2 text-white" type="submit">
+      {state?.error ? (
+        <p role="alert" className="neg text-sm font-medium">
+          {state.error}
+        </p>
+      ) : null}
+      <div className="mt-2 flex flex-wrap gap-3">
+        <button className="btn btn--ink" type="submit">
           {messages.entities.save}
         </button>
-        <Link className="self-center underline" href="/app/entities">
+        <Link className="btn btn--card" href="/app/entities">
           {messages.entities.cancel}
         </Link>
       </div>

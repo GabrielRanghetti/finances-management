@@ -33,42 +33,69 @@ export default function SignUpPage() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-4 p-6">
-      <h1 className="text-2xl font-semibold">{messages.signUp.title}</h1>
-      <form className="flex flex-col gap-3" onSubmit={onSubmit}>
-        <input
-          className="rounded border px-3 py-2"
-          type="text"
-          placeholder={messages.signUp.name}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-        <input
-          className="rounded border px-3 py-2"
-          type="email"
-          placeholder={messages.signUp.email}
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <input
-          className="rounded border px-3 py-2"
-          type="password"
-          placeholder={messages.signUp.password}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          minLength={8}
-        />
-        {error ? <p className="text-sm text-red-600">{error}</p> : null}
-        <button className="rounded bg-black px-3 py-2 text-white" type="submit">
-          {messages.signUp.submit}
-        </button>
-      </form>
-      <Link className="text-sm underline" href="/sign-in">
-        {messages.signUp.hasAccount}
-      </Link>
+    <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 py-10">
+      <section className="sheet flex flex-col gap-6 p-6 min-[60rem]:p-10">
+        <div>
+          <p className="lbl">{messages.appName}</p>
+          <h1 className="mt-1 text-xl font-semibold tracking-tight text-foreground">
+            {messages.signUp.title}
+          </h1>
+        </div>
+
+        <form className="flex flex-col gap-4" onSubmit={onSubmit}>
+          <label className="field">
+            <span className="lbl">{messages.signUp.name}</span>
+            <input
+              className="inp"
+              type="text"
+              name="name"
+              autoComplete="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </label>
+          <label className="field">
+            <span className="lbl">{messages.signUp.email}</span>
+            <input
+              className="inp"
+              type="email"
+              name="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </label>
+          <label className="field">
+            <span className="lbl">{messages.signUp.password}</span>
+            <input
+              className="inp"
+              type="password"
+              name="password"
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={8}
+            />
+          </label>
+
+          {error ? (
+            <p role="alert" className="neg text-sm font-medium">
+              {error}
+            </p>
+          ) : null}
+
+          <button className="btn btn--ink mt-1" type="submit">
+            {messages.signUp.submit}
+          </button>
+        </form>
+
+        <div className="border-t border-border pt-4 text-sm">
+          <Link href="/sign-in">{messages.signUp.hasAccount}</Link>
+        </div>
+      </section>
     </main>
   );
 }

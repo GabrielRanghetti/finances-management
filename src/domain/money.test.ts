@@ -20,6 +20,8 @@ describe("parseBrlToCents", () => {
 
   test("parses negatives", () => {
     expect(parseBrlToCents("-1.234,56")).toBe(-123456);
+    expect(parseBrlToCents("−1.234,56")).toBe(-123456);
+    expect(parseBrlToCents("+1.234,56")).toBe(123456);
   });
 
   test("rejects invalid input", () => {
@@ -32,7 +34,7 @@ describe("parseBrlToCents", () => {
 describe("formatCentsToBrl", () => {
   test("formats cents", () => {
     expect(formatCentsToBrl(123456)).toBe("1.234,56");
-    expect(formatCentsToBrl(-50)).toBe("-0,50");
+    expect(formatCentsToBrl(-50)).toBe("−0,50");
   });
 
   test("formats signed cents with plus and unicode minus", () => {

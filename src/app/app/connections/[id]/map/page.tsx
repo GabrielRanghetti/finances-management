@@ -44,32 +44,44 @@ export default async function MapConnectionAccountsPage({ params }: Props) {
   );
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">
-          {messages.connections.mapAccounts}
-        </h1>
-        <Link className="text-sm underline" href={`/app/connections/${connection.id}`}>
-          {messages.connections.cancel}
-        </Link>
-      </div>
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-6 min-[60rem]:px-10 min-[60rem]:py-10">
+      <section className="sheet p-6 min-[60rem]:p-10">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">
+            {messages.connections.mapAccounts}
+          </h1>
+          <Link
+            className="btn btn--card"
+            href={`/app/connections/${connection.id}`}
+          >
+            {messages.connections.cancel}
+          </Link>
+        </div>
 
-      {"error" in loaded && loaded.error ? (
-        <p className="text-sm text-red-700">{loaded.error}</p>
-      ) : (
-        <MapAccountsForm
-          connectionId={connection.id}
-          pluggyAccounts={"pluggyAccounts" in loaded ? loaded.pluggyAccounts! : []}
-          appAccounts={entityAccounts.map((account) => ({
-            id: account.id,
-            name: account.name,
-          }))}
-          existingMaps={Object.fromEntries(
-            maps.map((map) => [map.pluggyAccountId, map.accountId]),
-          )}
-          accountTypes={[...accountTypes]}
-        />
-      )}
+        {"error" in loaded && loaded.error ? (
+          <div role="alert" className="mt-6 border-t border-border pt-6">
+            <p className="neg text-sm font-medium">{loaded.error}</p>
+            <p className="lbl mt-1">{messages.overview.errorUnchanged}</p>
+          </div>
+        ) : (
+          <div className="mt-6 border-t border-border pt-6">
+            <MapAccountsForm
+              connectionId={connection.id}
+              pluggyAccounts={
+                "pluggyAccounts" in loaded ? loaded.pluggyAccounts! : []
+              }
+              appAccounts={entityAccounts.map((account) => ({
+                id: account.id,
+                name: account.name,
+              }))}
+              existingMaps={Object.fromEntries(
+                maps.map((map) => [map.pluggyAccountId, map.accountId]),
+              )}
+              accountTypes={[...accountTypes]}
+            />
+          </div>
+        )}
+      </section>
     </main>
   );
 }

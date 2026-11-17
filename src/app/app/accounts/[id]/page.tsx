@@ -16,6 +16,7 @@ import {
 } from "@/db/transactions";
 import { listValuations } from "@/db/valuations";
 import type { AccountType } from "@/db/schema";
+import { todayInSaoPaulo } from "@/domain/date";
 import {
   statementPeriodContaining,
   statementTotalCents,
@@ -63,7 +64,7 @@ export default async function AccountDetailPage({
   }
 
   const amounts = (await listAccountAmounts(session.user.id, account.id)) ?? [];
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInSaoPaulo();
   const valuationRows = isValuedAccountType(account.type)
     ? await listValuations(session.user.id, account.id)
     : [];
@@ -114,265 +115,385 @@ export default async function AccountDetailPage({
   const recordPayment = recordLoanPaymentAction.bind(null, account.id);
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 p-6">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold">{account.name}</h1>
-        <Link className="underline" href={`/app/accounts/${account.id}/edit`}>
-          {messages.accounts.edit}
-        </Link>
-      </div>
-      {importedCount !== null && Number.isFinite(importedCount) ? (
-        <p className="text-sm text-zinc-700">
-          {messages.imports.saved(importedCount)}
-        </p>
-      ) : null}
-      <dl className="grid gap-2 text-sm">
-        <div>
-          <dt className="font-medium">{messages.accounts.balance}</dt>
-          <dd>{messages.money(formatCentsToBrl(balanceCents))}</dd>
-        </div>
-        {ledgerBalanceCents !== null && Number.isFinite(ledgerBalanceCents) ? (
-          <div>
-            <dt className="font-medium">{messages.imports.ledgerBalance}</dt>
-            <dd>{messages.money(formatCentsToBrl(ledgerBalanceCents))}</dd>
-          </div>
-        ) : null}
-        <div>
-          <dt className="font-medium">{messages.accounts.type}</dt>
-          <dd>{typeLabel}</dd>
-        </div>
-        <div>
-          <dt className="font-medium">{messages.accounts.currency}</dt>
-          <dd>{account.currency}</dd>
-        </div>
-        <div>
-          <dt className="font-medium">{messages.accounts.institution}</dt>
-          <dd>{account.institution || messages.emptyValue}</dd>
-        </div>
-        {account.type === "credit_card" ? (
-          <div>
-            <dt className="font-medium">{messages.accounts.closingDay}</dt>
-            <dd>{account.closingDay ?? messages.emptyValue}</dd>
-          </div>
-        ) : null}
-        {isValuedAccountType(account.type) ? (
-          <>
-            <div>
-              <dt className="font-medium">
-                {messages.accounts.acquisitionCost}
-              </dt>
-              <dd>
-                {account.acquisitionCostCents != null
-                  ? messages.money(
-                      formatCentsToBrl(account.acquisitionCostCents),
-                    )
-                  : messages.emptyValue}
-              </dd>
-            </div>
-            <div>
-              <dt className="font-medium">
-                {messages.accounts.acquisitionDate}
-              </dt>
-              <dd>{account.acquisitionDate || messages.emptyValue}</dd>
-            </div>
-            <div>
-              <dt className="font-medium">{messages.accounts.currentValue}</dt>
-              <dd>{messages.money(formatCentsToBrl(balanceCents))}</dd>
-            </div>
-          </>
-        ) : null}
-        <div>
-          <dt className="font-medium">{messages.accounts.entity}</dt>
-          <dd>
-            {account.entity
-              ? messages.entities.linkLabel(
-                  account.entity.name,
-                  account.entity.type === "pj"
-                    ? messages.entities.typePj
-                    : messages.entities.typePf,
-                )
-              : messages.emptyValue}
-          </dd>
-        </div>
-        {account.archived ? (
-          <div>
-            <dt className="font-medium">{messages.accounts.archived}</dt>
-            <dd>{messages.accounts.archivedYes}</dd>
-          </div>
-        ) : null}
-      </dl>
-      {!account.archived ? (
-        <form action={archive}>
-          <button className="rounded border px-3 py-2 text-sm" type="submit">
-            {messages.accounts.archive}
-          </button>
-        </form>
-      ) : null}
-
-      {statement ? (
-        <section className="flex flex-col gap-3 border-t pt-4">
-          <h2 className="text-xl font-semibold">{messages.accounts.statement}</h2>
-          <form className="flex flex-wrap items-end gap-3 text-sm">
-            <label className="flex flex-col gap-1">
-              {messages.accounts.statementDate}
-              <input
-                className="rounded border px-3 py-2"
-                type="date"
-                name="statementDate"
-                defaultValue={statementDate}
-              />
-            </label>
-            <button className="rounded bg-black px-3 py-2 text-white" type="submit">
-              {messages.transactions.filter}
-            </button>
-          </form>
-          <p className="text-sm">
-            {messages.accounts.statementPeriod(statement.from, statement.to)}
-          </p>
-          <p className="text-sm">
-            {messages.accounts.statementTotal}:{" "}
-            {messages.money(formatCentsToBrl(statementTotal))}
-          </p>
-          {statementRows.length === 0 ? (
-            <p className="text-sm">{messages.accounts.statementEmpty}</p>
-          ) : (
-            <ul className="flex flex-col gap-2 text-sm">
-              {statementRows.map((row) => (
-                <li key={row.id} className="flex flex-wrap gap-x-3 border-b py-2">
-                  <span>{row.date}</span>
-                  <span>{messages.money(formatCentsToBrl(row.amountCents))}</span>
-                  <span>{row.description}</span>
-                  <Link
-                    className="underline"
-                    href={`/app/transactions/${row.id}/edit`}
-                  >
-                    {messages.transactions.edit}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      ) : null}
-
-      {isValuedAccountType(account.type) ? (
-        <section className="flex flex-col gap-3 border-t pt-4">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-xl font-semibold">
-              {messages.accounts.valuations}
-            </h2>
-            <Link
-              className="underline text-sm"
-              href={`/app/accounts/${account.id}/valuations/new`}
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-6 min-[60rem]:px-10 min-[60rem]:py-10">
+      <article className="sheet p-6 min-[60rem]:p-10">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">
+              {account.name}
+            </h1>
+            <p className="lbl mt-3">
+              {isValuedAccountType(account.type)
+                ? messages.accounts.currentValue
+                : messages.accounts.balance}
+            </p>
+            <p
+              className={`fig mt-1 text-4xl font-semibold tracking-tight break-words whitespace-normal min-[60rem]:text-5xl ${
+                balanceCents < 0 ? "neg" : "text-foreground"
+              }`}
             >
-              {messages.accounts.valuationCreate}
+              {formatAccountCurrencyBalance(balanceCents, account.currency)}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              className="btn btn--card"
+              href={`/app/accounts/${account.id}/edit`}
+            >
+              {messages.accounts.edit}
             </Link>
+            {!account.archived ? (
+              <form action={archive}>
+                <button className="btn btn--card" type="submit">
+                  {messages.accounts.archive}
+                </button>
+              </form>
+            ) : null}
           </div>
-          {valuationRows.length === 0 ? (
-            <p className="text-sm">{messages.accounts.valuationEmpty}</p>
-          ) : (
-            <ul className="flex flex-col gap-2 text-sm">
-              {valuationRows.map((row) => (
-                <li
-                  key={row.id}
-                  className="flex flex-wrap gap-x-3 border-b py-2"
-                >
-                  <span>{row.date}</span>
-                  <span>
-                    {messages.money(formatCentsToBrl(row.valueCents))}
-                  </span>
-                  <Link
-                    className="underline"
-                    href={`/app/accounts/${account.id}/valuations/${row.id}/edit`}
-                  >
-                    {messages.accounts.edit}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      ) : null}
+        </div>
 
-      {loanTerms ? (
-        <section className="flex flex-col gap-3 border-t pt-4">
-          <h2 className="text-xl font-semibold">
-            {messages.accounts.loanSchedule}
-          </h2>
-          <dl className="grid gap-1 text-sm">
-            <div>
-              <dt className="inline font-medium">
-                {messages.accounts.loanPrincipal}:{" "}
-              </dt>
-              <dd className="inline">
-                {messages.money(formatCentsToBrl(loanTerms.principalCents))}
-              </dd>
-            </div>
-            <div>
-              <dt className="inline font-medium">
-                {messages.accounts.loanSystem}:{" "}
-              </dt>
-              <dd className="inline">
-                {loanTerms.system === "sac"
-                  ? messages.accounts.loanSystemSac
-                  : messages.accounts.loanSystemPrice}
-              </dd>
-            </div>
-          </dl>
-          <div className="overflow-x-auto text-sm">
-            <table className="w-full border-collapse text-left">
-              <thead>
-                <tr className="border-b">
-                  <th className="py-1 pr-2">{messages.accounts.loanInstallment}</th>
-                  <th className="py-1 pr-2">{messages.transactions.date}</th>
-                  <th className="py-1 pr-2">{messages.accounts.loanPayment}</th>
-                  <th className="py-1 pr-2">{messages.accounts.loanInterest}</th>
-                  <th className="py-1 pr-2">
-                    {messages.accounts.loanAmortization}
-                  </th>
-                  <th className="py-1">{messages.accounts.loanOutstanding}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {schedule.map((line) => (
-                  <tr key={line.installment} className="border-b">
-                    <td className="py-1 pr-2">{line.installment}</td>
-                    <td className="py-1 pr-2">{line.date}</td>
-                    <td className="py-1 pr-2">
-                      {messages.money(formatCentsToBrl(line.paymentCents))}
-                    </td>
-                    <td className="py-1 pr-2">
-                      {messages.money(formatCentsToBrl(line.interestCents))}
-                    </td>
-                    <td className="py-1 pr-2">
-                      {messages.money(
-                        formatCentsToBrl(line.amortizationCents),
-                      )}
-                    </td>
-                    <td className="py-1">
-                      {messages.money(
-                        formatCentsToBrl(line.outstandingCents),
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {importedCount !== null && Number.isFinite(importedCount) ? (
+          <p className="lbl mt-4">{messages.imports.saved(importedCount)}</p>
+        ) : null}
+
+        <dl className="mt-6 grid grid-cols-1 gap-4 border-t border-border pt-6 text-sm sm:grid-cols-2 min-[60rem]:grid-cols-3">
+          <div>
+            <dt className="lbl">{messages.accounts.type}</dt>
+            <dd className="mt-0.5 font-medium text-foreground">{typeLabel}</dd>
           </div>
-          {nextInstallment > loanTerms.termMonths ? (
-            <p className="text-sm">{messages.accounts.loanPaid}</p>
-          ) : paymentAccounts.length > 0 ? (
-            <LoanPaymentForm
-              action={recordPayment}
-              installment={nextInstallment}
-              termMonths={loanTerms.termMonths}
-              paymentAccounts={paymentAccounts}
-            />
-          ) : (
-            <p className="text-sm">{messages.accounts.errorLoanPayment}</p>
-          )}
-        </section>
-      ) : null}
+          <div>
+            <dt className="lbl">{messages.accounts.currency}</dt>
+            <dd className="mt-0.5 font-medium text-foreground">
+              {account.currency}
+            </dd>
+          </div>
+          <div>
+            <dt className="lbl">{messages.accounts.institution}</dt>
+            <dd className="mt-0.5 font-medium text-foreground">
+              {account.institution || messages.emptyValue}
+            </dd>
+          </div>
+          <div>
+            <dt className="lbl">{messages.accounts.entity}</dt>
+            <dd className="mt-0.5 font-medium text-foreground">
+              {account.entity
+                ? formatEntityLabel(account.entity.name, account.entity.type)
+                : messages.emptyValue}
+            </dd>
+          </div>
+          {account.type === "credit_card" ? (
+            <div>
+              <dt className="lbl">{messages.accounts.closingDay}</dt>
+              <dd className="fig mt-0.5 font-medium text-foreground">
+                {account.closingDay ?? messages.emptyValue}
+              </dd>
+            </div>
+          ) : null}
+          {isValuedAccountType(account.type) ? (
+            <>
+              <div>
+                <dt className="lbl">{messages.accounts.acquisitionCost}</dt>
+                <dd className="fig mt-0.5 font-medium text-foreground">
+                  {account.acquisitionCostCents != null
+                    ? formatAccountCurrencyBalance(
+                        account.acquisitionCostCents,
+                        account.currency,
+                      )
+                    : messages.emptyValue}
+                </dd>
+              </div>
+              <div>
+                <dt className="lbl">{messages.accounts.acquisitionDate}</dt>
+                <dd className="fig mt-0.5 font-medium text-foreground">
+                  {account.acquisitionDate
+                    ? formatDateDdMmYyyy(account.acquisitionDate)
+                    : messages.emptyValue}
+                </dd>
+              </div>
+            </>
+          ) : null}
+          {ledgerBalanceCents !== null &&
+          Number.isFinite(ledgerBalanceCents) ? (
+            <div>
+              <dt className="lbl">{messages.imports.ledgerBalance}</dt>
+              <dd
+                className={`fig mt-0.5 font-medium ${
+                  ledgerBalanceCents < 0 ? "neg" : "text-foreground"
+                }`}
+              >
+                {formatAccountCurrencyBalance(
+                  ledgerBalanceCents,
+                  account.currency,
+                )}
+              </dd>
+            </div>
+          ) : null}
+          {account.archived ? (
+            <div>
+              <dt className="lbl">{messages.accounts.archived}</dt>
+              <dd className="mt-0.5 font-medium text-foreground">
+                {messages.accounts.archivedYes}
+              </dd>
+            </div>
+          ) : null}
+        </dl>
+
+        {statement ? (
+          <section className="mt-8 flex flex-col gap-4 border-t border-border pt-6">
+            <h2 className="text-base font-semibold text-foreground">
+              {messages.accounts.statement}
+            </h2>
+            <form className="flex flex-wrap items-end gap-3 text-sm">
+              <label className="field">
+                <span className="lbl">{messages.accounts.statementDate}</span>
+                <input
+                  className="inp w-auto"
+                  type="date"
+                  name="statementDate"
+                  defaultValue={statementDate}
+                />
+              </label>
+              <button className="btn btn--card" type="submit">
+                {messages.transactions.filter}
+              </button>
+            </form>
+            <div className="flex flex-wrap items-baseline justify-between gap-4 text-sm">
+              <p className="lbl">
+                {messages.accounts.statementPeriod(
+                  formatDateDdMmYyyy(statement.from),
+                  formatDateDdMmYyyy(statement.to),
+                )}
+              </p>
+              <p>
+                <span className="lbl">
+                  {messages.accounts.statementTotal}:{" "}
+                </span>
+                <span
+                  className={`fig font-semibold ${
+                    statementTotal < 0 ? "neg" : "text-foreground"
+                  }`}
+                >
+                  {formatAccountCurrencyBalance(
+                    statementTotal,
+                    account.currency,
+                  )}
+                </span>
+              </p>
+            </div>
+            {statementRows.length === 0 ? (
+              <p className="lbl">{messages.accounts.statementEmpty}</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th scope="col">{messages.transactions.date}</th>
+                      <th scope="col">{messages.transactions.description}</th>
+                      <th scope="col" className="num">
+                        {messages.transactions.amount}
+                      </th>
+                      <th scope="col" className="num !pl-4">
+                        {messages.transactions.edit}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {statementRows.map((row) => (
+                      <tr key={row.id}>
+                        <td className="fig">{formatDateDdMmYyyy(row.date)}</td>
+                        <td>{row.description}</td>
+                        <td
+                          className={`num fig ${
+                            row.amountCents > 0
+                              ? "pos"
+                              : row.amountCents < 0
+                                ? "neg"
+                                : "text-foreground"
+                          }`}
+                        >
+                          {formatSignedAmount(row.amountCents)}
+                        </td>
+                        <td className="num !pl-4">
+                          <Link href={`/app/transactions/${row.id}/edit`}>
+                            {messages.transactions.edit}
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        ) : null}
+
+        {isValuedAccountType(account.type) ? (
+          <section className="mt-8 flex flex-col gap-4 border-t border-border pt-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-base font-semibold text-foreground">
+                {messages.accounts.valuations}
+              </h2>
+              <Link
+                className="btn btn--ink"
+                href={`/app/accounts/${account.id}/valuations/new`}
+              >
+                {messages.accounts.valuationCreate}
+              </Link>
+            </div>
+            {valuationRows.length === 0 ? (
+              <p className="lbl">{messages.accounts.valuationEmpty}</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th scope="col">{messages.accounts.valuationDate}</th>
+                      <th scope="col" className="num">
+                        {messages.accounts.valuationValue}
+                      </th>
+                      <th scope="col" className="num !pl-4">
+                        {messages.transactions.edit}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {valuationRows.map((row) => (
+                      <tr key={row.id}>
+                        <td className="fig">{formatDateDdMmYyyy(row.date)}</td>
+                        <td className="num fig">
+                          {formatCentsToBrl(row.valueCents)}
+                        </td>
+                        <td className="num !pl-4">
+                          <Link
+                            href={`/app/accounts/${account.id}/valuations/${row.id}/edit`}
+                          >
+                            {messages.transactions.edit}
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        ) : null}
+
+        {loanTerms ? (
+          <section className="mt-8 flex flex-col gap-4 border-t border-border pt-6">
+            <h2 className="text-base font-semibold text-foreground">
+              {messages.accounts.loanSchedule}
+            </h2>
+            <dl className="flex flex-wrap gap-6 text-sm">
+              <div>
+                <dt className="lbl inline">
+                  {messages.accounts.loanPrincipal}:{" "}
+                </dt>
+                <dd className="fig inline font-medium text-foreground">
+                  {formatAccountCurrencyBalance(
+                    loanTerms.principalCents,
+                    account.currency,
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="lbl inline">{messages.accounts.loanSystem}: </dt>
+                <dd className="inline font-medium text-foreground">
+                  {loanTerms.system === "sac"
+                    ? messages.accounts.loanSystemSac
+                    : messages.accounts.loanSystemPrice}
+                </dd>
+              </div>
+            </dl>
+            <div className="overflow-x-auto">
+              <table className="tbl">
+                <thead>
+                  <tr>
+                    <th scope="col">{messages.accounts.loanInstallment}</th>
+                    <th scope="col">{messages.transactions.date}</th>
+                    <th scope="col" className="num">
+                      {messages.accounts.loanPayment}
+                    </th>
+                    <th scope="col" className="num">
+                      {messages.accounts.loanInterest}
+                    </th>
+                    <th scope="col" className="num">
+                      {messages.accounts.loanAmortization}
+                    </th>
+                    <th scope="col" className="num">
+                      {messages.accounts.loanOutstanding}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {schedule.map((line) => (
+                    <tr key={line.installment}>
+                      <td className="fig">{line.installment}</td>
+                      <td className="fig">{formatDateDdMmYyyy(line.date)}</td>
+                      <td className="num fig">
+                        {formatCentsToBrl(line.paymentCents)}
+                      </td>
+                      <td className="num fig">
+                        {formatCentsToBrl(line.interestCents)}
+                      </td>
+                      <td className="num fig">
+                        {formatCentsToBrl(line.amortizationCents)}
+                      </td>
+                      <td className="num fig">
+                        {formatCentsToBrl(line.outstandingCents)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {nextInstallment > loanTerms.termMonths ? (
+              <p className="lbl">{messages.accounts.loanPaid}</p>
+            ) : paymentAccounts.length > 0 ? (
+              <LoanPaymentForm
+                action={recordPayment}
+                installment={nextInstallment}
+                termMonths={loanTerms.termMonths}
+                paymentAccounts={paymentAccounts}
+              />
+            ) : (
+              <p className="neg text-sm">
+                {messages.accounts.errorLoanPayment}
+              </p>
+            )}
+          </section>
+        ) : null}
+      </article>
     </main>
   );
+}
+
+function formatDateDdMmYyyy(isoDate: string): string {
+  const [year, month, day] = isoDate.split("-");
+  return day && month && year ? `${day}/${month}/${year}` : isoDate;
+}
+
+function formatEntityLabel(name: string, type: string): string {
+  const typeLabel =
+    type === "pj" ? messages.entities.typePj : messages.entities.typePf;
+  return name.trim().toLowerCase() === typeLabel.trim().toLowerCase()
+    ? name
+    : messages.entities.linkLabel(name, typeLabel);
+}
+
+function formatAccountCurrencyBalance(cents: number, currency: string): string {
+  const abs = formatCentsToBrl(Math.abs(cents));
+  const symbol = currency === "BRL" ? "R$" : currency;
+  return cents < 0 ? `− ${symbol} ${abs}` : `${symbol} ${abs}`;
+}
+
+function formatSignedAmount(cents: number): string {
+  const abs = formatCentsToBrl(Math.abs(cents));
+  if (cents > 0) {
+    return `+${abs}`;
+  }
+  if (cents < 0) {
+    return `−${abs}`;
+  }
+  return abs;
 }

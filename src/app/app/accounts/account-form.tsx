@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import type { AccountType } from "@/db/schema";
 import { accountTypes } from "@/db/schema";
+import { todayInSaoPaulo } from "@/domain/date";
 import { formatCentsToBrl } from "@/domain/money";
 import { isValuedAccountType } from "@/domain/valuations";
 import { messages } from "@/messages/pt-BR";
@@ -34,22 +35,30 @@ type Props = {
 export function AccountForm({ action, entities, defaults }: Props) {
   const [state, formAction] = useActionState(action, undefined);
   const [type, setType] = useState<AccountType>(defaults?.type ?? "bank");
+  const today = todayInSaoPaulo();
 
   return (
-    <form action={formAction} className="flex flex-col gap-3">
-      <label className="flex flex-col gap-1 text-sm">
-        {messages.accounts.name}
+    <form action={formAction} className="flex flex-col gap-4">
+      <div className="field">
+        <label className="lbl" htmlFor="acc-name">
+          {messages.accounts.name}
+        </label>
         <input
-          className="rounded border px-3 py-2"
+          id="acc-name"
+          className="inp"
           name="name"
           required
           defaultValue={defaults?.name ?? ""}
         />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        {messages.accounts.type}
+      </div>
+
+      <div className="field">
+        <label className="lbl" htmlFor="acc-type">
+          {messages.accounts.type}
+        </label>
         <select
-          className="rounded border px-3 py-2"
+          id="acc-type"
+          className="inp"
           name="type"
           required
           value={type}
@@ -61,29 +70,41 @@ export function AccountForm({ action, entities, defaults }: Props) {
             </option>
           ))}
         </select>
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        {messages.accounts.currency}
+      </div>
+
+      <div className="field">
+        <label className="lbl" htmlFor="acc-currency">
+          {messages.accounts.currency}
+        </label>
         <input
-          className="rounded border px-3 py-2"
+          id="acc-currency"
+          className="inp"
           name="currency"
           required
           defaultValue={defaults?.currency ?? "BRL"}
         />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        {messages.accounts.institution}
+      </div>
+
+      <div className="field">
+        <label className="lbl" htmlFor="acc-institution">
+          {messages.accounts.institution}
+        </label>
         <input
-          className="rounded border px-3 py-2"
+          id="acc-institution"
+          className="inp"
           name="institution"
           defaultValue={defaults?.institution ?? ""}
         />
-      </label>
+      </div>
+
       {type === "credit_card" ? (
-        <label className="flex flex-col gap-1 text-sm">
-          {messages.accounts.closingDay}
+        <div className="field">
+          <label className="lbl" htmlFor="acc-closing-day">
+            {messages.accounts.closingDay}
+          </label>
           <input
-            className="rounded border px-3 py-2"
+            id="acc-closing-day"
+            className="inp fig"
             name="closingDay"
             type="number"
             min={1}
@@ -91,14 +112,18 @@ export function AccountForm({ action, entities, defaults }: Props) {
             required
             defaultValue={defaults?.closingDay ?? 10}
           />
-        </label>
+        </div>
       ) : null}
+
       {isValuedAccountType(type) ? (
         <>
-          <label className="flex flex-col gap-1 text-sm">
-            {messages.accounts.acquisitionCost}
+          <div className="field">
+            <label className="lbl" htmlFor="acc-acquisition-cost">
+              {messages.accounts.acquisitionCost}
+            </label>
             <input
-              className="rounded border px-3 py-2"
+              id="acc-acquisition-cost"
+              className="inp fig"
               name="acquisitionCost"
               required
               placeholder={messages.transactions.amountPlaceholder}
@@ -109,70 +134,86 @@ export function AccountForm({ action, entities, defaults }: Props) {
                   : ""
               }
             />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            {messages.accounts.acquisitionDate}
+          </div>
+          <div className="field">
+            <label className="lbl" htmlFor="acc-acquisition-date">
+              {messages.accounts.acquisitionDate}
+            </label>
             <input
-              className="rounded border px-3 py-2"
+              id="acc-acquisition-date"
+              className="inp"
               name="acquisitionDate"
               type="date"
               required
-              defaultValue={
-                defaults?.acquisitionDate ??
-                new Date().toISOString().slice(0, 10)
-              }
+              defaultValue={defaults?.acquisitionDate ?? today}
             />
-          </label>
+          </div>
         </>
       ) : null}
+
       {type === "loan" && !defaults ? (
         <>
-          <label className="flex flex-col gap-1 text-sm">
-            {messages.accounts.loanPrincipal}
+          <div className="field">
+            <label className="lbl" htmlFor="acc-loan-principal">
+              {messages.accounts.loanPrincipal}
+            </label>
             <input
-              className="rounded border px-3 py-2"
+              id="acc-loan-principal"
+              className="inp fig"
               name="principal"
               required
               placeholder={messages.transactions.amountPlaceholder}
               inputMode="decimal"
             />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            {messages.accounts.loanRate}
+          </div>
+          <div className="field">
+            <label className="lbl" htmlFor="acc-loan-rate">
+              {messages.accounts.loanRate}
+            </label>
             <input
-              className="rounded border px-3 py-2"
+              id="acc-loan-rate"
+              className="inp fig"
               name="monthlyRate"
               required
               placeholder={messages.accounts.loanRatePlaceholder}
               inputMode="decimal"
               defaultValue="1,00"
             />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            {messages.accounts.loanTermMonths}
+          </div>
+          <div className="field">
+            <label className="lbl" htmlFor="acc-loan-term">
+              {messages.accounts.loanTermMonths}
+            </label>
             <input
-              className="rounded border px-3 py-2"
+              id="acc-loan-term"
+              className="inp fig"
               name="termMonths"
               type="number"
               min={1}
               required
               defaultValue={12}
             />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            {messages.accounts.loanFirstPayment}
+          </div>
+          <div className="field">
+            <label className="lbl" htmlFor="acc-loan-first-payment">
+              {messages.accounts.loanFirstPayment}
+            </label>
             <input
-              className="rounded border px-3 py-2"
+              id="acc-loan-first-payment"
+              className="inp"
               name="firstPaymentDate"
               type="date"
               required
-              defaultValue={new Date().toISOString().slice(0, 10)}
+              defaultValue={today}
             />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            {messages.accounts.loanSystem}
+          </div>
+          <div className="field">
+            <label className="lbl" htmlFor="acc-loan-system">
+              {messages.accounts.loanSystem}
+            </label>
             <select
-              className="rounded border px-3 py-2"
+              id="acc-loan-system"
+              className="inp"
               name="loanSystem"
               required
               defaultValue="price"
@@ -180,34 +221,48 @@ export function AccountForm({ action, entities, defaults }: Props) {
               <option value="price">{messages.accounts.loanSystemPrice}</option>
               <option value="sac">{messages.accounts.loanSystemSac}</option>
             </select>
-          </label>
+          </div>
         </>
       ) : null}
-      <label className="flex flex-col gap-1 text-sm">
-        {messages.accounts.entity}
+
+      <div className="field">
+        <label className="lbl" htmlFor="acc-entity">
+          {messages.accounts.entity}
+        </label>
         <select
-          className="rounded border px-3 py-2"
+          id="acc-entity"
+          className="inp"
           name="entityId"
           required
           defaultValue={defaults?.entityId ?? entities[0]?.id ?? ""}
         >
-          {entities.map((entity) => (
-            <option key={entity.id} value={entity.id}>
-              {entity.name} (
-              {entity.type === "pj"
+          {entities.map((entity) => {
+            const typeLabel =
+              entity.type === "pj"
                 ? messages.entities.typePj
-                : messages.entities.typePf}
-              )
-            </option>
-          ))}
+                : messages.entities.typePf;
+            return (
+              <option key={entity.id} value={entity.id}>
+                {entity.name === typeLabel
+                  ? entity.name
+                  : messages.entities.linkLabel(entity.name, typeLabel)}
+              </option>
+            );
+          })}
         </select>
-      </label>
-      {state?.error ? <p className="text-sm text-red-700">{state.error}</p> : null}
-      <div className="flex gap-3">
-        <button className="rounded bg-black px-3 py-2 text-white" type="submit">
+      </div>
+
+      {state?.error ? (
+        <p role="alert" className="neg text-sm">
+          {state.error}
+        </p>
+      ) : null}
+
+      <div className="mt-2 flex flex-wrap gap-3">
+        <button className="btn btn--ink" type="submit">
           {messages.accounts.save}
         </button>
-        <Link className="self-center underline" href="/app/accounts">
+        <Link className="btn btn--card" href="/app/accounts">
           {messages.accounts.cancel}
         </Link>
       </div>
