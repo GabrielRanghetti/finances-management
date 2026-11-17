@@ -103,14 +103,18 @@ describe("transactions route isolation", () => {
 
     getSession.mockResolvedValue(asSession(userA));
     const listHtmlA = renderToStaticMarkup(
-      await TransactionsListPage({ searchParams: Promise.resolve({}) }),
+      await TransactionsListPage({
+        searchParams: Promise.resolve({ month: "2026-01" }),
+      }),
     );
     expect(listHtmlA).toContain("Receita A");
     expect(listHtmlA).not.toContain("Receita B");
 
     getSession.mockResolvedValue(asSession(userB));
     const listHtmlB = renderToStaticMarkup(
-      await TransactionsListPage({ searchParams: Promise.resolve({}) }),
+      await TransactionsListPage({
+        searchParams: Promise.resolve({ month: "2026-01" }),
+      }),
     );
     expect(listHtmlB).toContain("Receita B");
     expect(listHtmlB).not.toContain("Receita A");

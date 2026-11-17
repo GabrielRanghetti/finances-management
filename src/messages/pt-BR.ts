@@ -279,6 +279,34 @@ export const messages = {
     errorAccounts: "Selecione contas diferentes para a transferência",
     errorInstallments: "Informe um número de parcelas válido",
     errorCreditCard: "Parcelas só podem ser lançadas em cartão de crédito",
+    previousMonthAria: "Mês anterior",
+    nextMonthAria: "Próximo mês",
+    monthHeading: (monthCap: string, year: number | string) =>
+      `${monthCap} de ${year}`,
+    searchPlaceholder: "Buscar",
+    searchAria: "Buscar nos lançamentos",
+    allAccounts: "Todas as contas",
+    allCategories: "Todas as categorias",
+    chooseCategory: "Escolher",
+    uncategorized: "Sem categoria",
+    ownTransferCategory: "Entre contas suas",
+    transferFromTo: (from: string, to: string) => `${from} para ${to}`,
+    descriptionPlaceholder: "Padaria, salário, aluguel",
+    quickAmountPlaceholder: "−0,00",
+    add: "Adicionar",
+    footerTransferNote:
+      "Dinheiro que passa entre contas suas fica fora dessas somas.",
+    emptyMonthTitle: (monthCap: string) =>
+      `${monthCap} ainda não tem lançamentos`,
+    emptyMonthBody:
+      "Digite o primeiro na linha de cima ou traga o extrato do banco.",
+    emptyImportAction: "Importar extrato",
+    emptyTypeAction: "Digitar um lançamento",
+    loadingAria: "Carregando lançamentos",
+    errorTitle: "Não deu para carregar os lançamentos",
+    errorBody:
+      "A conexão com o servidor caiu. Nada do que você já lançou foi alterado.",
+    errorRetry: "Tentar de novo",
   },
   imports: {
     title: "Importar",
