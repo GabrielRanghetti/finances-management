@@ -418,4 +418,44 @@ export const messages = {
   placeholders: {
     comingSoon: "Em breve.",
   },
+  screens: {
+    accountsEmptyBody:
+      "Cadastre contas bancárias, cartões, investimentos, imóveis, veículos ou empréstimos para acompanhar os saldos.",
+    importsSubtitle:
+      "Escolha o formato do arquivo exportado pelo banco para revisar os lançamentos antes de importar.",
+    importsOfxDescription:
+      "Extrato em formato OFX baixado do banco ou cartão.",
+    importsCsvDescription:
+      "Planilha CSV exportada pelo banco, com mapeamento de colunas.",
+    importsPdfDescription: "Extrato em PDF do Itaú.",
+    importsOpenFlow: "Escolher arquivo",
+    importsSelectAccount: "Escolher conta",
+    importsColumnImport: "Importar",
+    importsColumnBankDescription: "Descrição no banco",
+    importsColumnStatus: "Situação",
+    importsStatusNew: "Novo",
+    importsStatusDuplicate: "Já estava aqui",
+    importsReviewCount: (total: number, newCount: number, dupCount: number) =>
+      `O arquivo tem ${total} ${total === 1 ? "lançamento" : "lançamentos"}. ${newCount} ${newCount === 1 ? "é novo" : "são novos"} e ${dupCount} já ${dupCount === 1 ? "estava" : "estavam"} aqui.`,
+    importsRowAria: (description: string) => `Importar ${description}`,
+    importsConfirmCount: (count: number) =>
+      count === 1
+        ? "Importar 1 lançamento"
+        : `Importar ${count} lançamentos`,
+    importsBalanceAfter: "Saldo depois de importar",
+    importsBalanceReported: "Saldo que o banco informa",
+    importsBalancesMatch: "Os dois batem.",
+    importsBalancesMismatch: (diffFormatted: string) =>
+      `Os dois não batem (diferença de R$ ${diffFormatted}).`,
+    connectionsEmptyBody:
+      "Conecte um item do Meu Pluggy para sincronizar contas e lançamentos via Open Finance.",
+    connectionsLoadingAria: "Carregando conexões",
+    connectionsErrorTitle: "Não foi possível carregar as conexões.",
+    connectionsNewAccountName: "Nome da nova conta",
+    connectionsNewAccountType: "Tipo da nova conta",
+    entitiesEmptyBody:
+      "Cadastre suas entidades de pessoa física ou jurídica para separar as contas.",
+    entitiesLoadingAria: "Carregando entidades",
+    entitiesErrorTitle: "Não foi possível carregar as entidades.",
+  },
 } as const;

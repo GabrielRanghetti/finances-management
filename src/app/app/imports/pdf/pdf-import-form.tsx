@@ -9,7 +9,7 @@ import {
   type PdfPreviewState,
 } from "../actions";
 import { MAX_IMPORT_BYTES } from "../limits";
-import { formatCentsToBrl } from "@/domain/money";
+import { formatSignedCentsToBrl } from "@/domain/money";
 import { messages } from "@/messages/pt-BR";
 
 type AccountOption = { id: string; name: string };
@@ -17,6 +17,11 @@ type AccountOption = { id: string; name: string };
 type Props = {
   accounts: AccountOption[];
 };
+
+function formatDdMm(isoDate: string): string {
+  const [, month, day] = isoDate.split("-");
+  return day && month ? `${day}/${month}` : isoDate;
+}
 
 export function PdfImportForm({ accounts }: Props) {
   const [previewState, previewAction, previewPending] = useActionState(
@@ -63,134 +68,172 @@ export function PdfImportForm({ accounts }: Props) {
     });
   }
 
+  const totalCount = rows?.length ?? 0;
+  const duplicateCount =
+    rows?.filter((row) => row.probableDuplicate).length ?? 0;
+  const newCount = totalCount - duplicateCount;
+  const selectedCount =
+    rows?.filter((row, index) => isIncluded(index, row.include)).length ?? 0;
+
   return (
     <div className="flex flex-col gap-6">
-      <form
-        action={(formData) => {
-          setConfirmError(undefined);
-          setClientError(undefined);
-          setIncludeOverrides({});
-          const selected = formData.get("file");
-          if (selected instanceof File) {
-            setFile(selected);
-            if (selected.size > MAX_IMPORT_BYTES) {
-              setClientError(messages.imports.errorFileSize);
-              return;
+      <section className="sheet p-5 min-[60rem]:p-8">
+        <form
+          action={(formData) => {
+            setConfirmError(undefined);
+            setClientError(undefined);
+            setIncludeOverrides({});
+            const selected = formData.get("file");
+            if (selected instanceof File) {
+              setFile(selected);
+              if (selected.size > MAX_IMPORT_BYTES) {
+                setClientError(messages.imports.errorFileSize);
+                return;
+              }
             }
-          }
-          setAccountId(String(formData.get("accountId") ?? ""));
-          previewAction(formData);
-        }}
-        className="flex flex-col gap-3"
-      >
-        <label className="flex flex-col gap-1 text-sm">
-          {messages.imports.account}
-          <select
-            className="rounded border px-3 py-2"
-            name="accountId"
-            required
-            value={accountId}
-            onChange={(event) => setAccountId(event.target.value)}
-          >
-            <option value="">{messages.transactions.filterAll}</option>
-            {accounts.map((account) => (
-              <option key={account.id} value={account.id}>
-                {account.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          {messages.imports.file}
-          <input
-            className="rounded border px-3 py-2"
-            name="file"
-            type="file"
-            accept=".pdf,application/pdf"
-            required
-            onChange={(event) => {
-              setFile(event.target.files?.[0] ?? null);
-              setClientError(undefined);
-            }}
-          />
-        </label>
-        <button
-          className="self-start rounded bg-zinc-900 px-4 py-2 text-sm text-white disabled:opacity-50"
-          type="submit"
-          disabled={previewPending}
+            setAccountId(String(formData.get("accountId") ?? ""));
+            previewAction(formData);
+          }}
+          className="flex flex-col gap-4 min-[60rem]:flex-row min-[60rem]:items-end"
         >
-          {messages.imports.preview}
-        </button>
-      </form>
+          <label className="field flex-1">
+            <span className="lbl">{messages.imports.account}</span>
+            <select
+              className="inp"
+              name="accountId"
+              required
+              value={accountId}
+              onChange={(event) => setAccountId(event.target.value)}
+            >
+              <option value="" disabled>
+                {messages.screens.importsSelectAccount}
+              </option>
+              {accounts.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field flex-1">
+            <span className="lbl">{messages.imports.file}</span>
+            <input
+              className="inp"
+              name="file"
+              type="file"
+              accept=".pdf,application/pdf"
+              required
+              onChange={(event) => {
+                setFile(event.target.files?.[0] ?? null);
+                setClientError(undefined);
+              }}
+            />
+          </label>
+          <button
+            className={`btn ${rows ? "btn--card" : "btn--ink"} self-start min-[60rem]:self-auto`}
+            type="submit"
+            disabled={previewPending}
+          >
+            {messages.imports.preview}
+          </button>
+        </form>
 
-      {error ? <p className="text-sm text-red-700">{error}</p> : null}
+        {error ? (
+          <p role="alert" className="neg mt-4 text-sm font-medium">
+            {error}
+          </p>
+        ) : null}
+      </section>
 
       {rows && previewState?.accountId ? (
-        <div className="flex flex-col gap-4">
-          <p className="text-sm">
-            {messages.imports.accountBalance}:{" "}
-            {messages.money(
-              formatCentsToBrl(previewState.accountBalanceCents ?? 0),
+        <section className="sheet p-5 min-[60rem]:p-8">
+          <p className="text-sm text-foreground">
+            {messages.screens.importsReviewCount(
+              totalCount,
+              newCount,
+              duplicateCount,
             )}
           </p>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="py-2 pr-2">{messages.imports.include}</th>
-                  <th className="py-2 pr-2">{messages.imports.date}</th>
-                  <th className="py-2 pr-2">{messages.imports.description}</th>
-                  <th className="py-2 pr-2">{messages.imports.amount}</th>
-                  <th className="py-2">{messages.imports.probableDuplicate}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row, index) => (
-                  <tr
-                    key={`${row.description}-${index}`}
-                    className="border-b"
-                  >
-                    <td className="py-2 pr-2">
-                      <input
-                        type="checkbox"
-                        checked={isIncluded(index, row.include)}
-                        onChange={() =>
-                          setIncludeOverrides((current) => ({
-                            ...current,
-                            [index]: !isIncluded(index, row.include),
-                          }))
-                        }
-                      />
-                    </td>
-                    <td className="whitespace-nowrap py-2 pr-2">{row.date}</td>
-                    <td className="py-2 pr-2">{row.description}</td>
-                    <td className="whitespace-nowrap py-2 pr-2">
-                      {messages.money(formatCentsToBrl(row.amountCents))}
-                    </td>
-                    <td className="py-2">
-                      {row.probableDuplicate
-                        ? messages.imports.probableDuplicate
-                        : ""}
-                    </td>
+
+          {rows.length === 0 ? (
+            <p className="lbl mt-4">{messages.imports.emptyPreview}</p>
+          ) : (
+            <div className="mt-4 overflow-x-auto">
+              <table className="tbl">
+                <thead>
+                  <tr>
+                    <th scope="col">{messages.screens.importsColumnImport}</th>
+                    <th scope="col">{messages.imports.date}</th>
+                    <th scope="col">
+                      {messages.screens.importsColumnBankDescription}
+                    </th>
+                    <th scope="col">{messages.screens.importsColumnStatus}</th>
+                    <th scope="col" className="num">
+                      {messages.imports.amount}
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <button
-              className="rounded bg-zinc-900 px-4 py-2 text-sm text-white disabled:opacity-50"
-              type="button"
-              disabled={pending}
-              onClick={onConfirm}
-            >
-              {messages.imports.confirm}
-            </button>
-            <Link className="self-center text-sm underline" href="/app/imports">
+                </thead>
+                <tbody>
+                  {rows.map((row, index) => (
+                    <tr
+                      key={`${row.description}-${index}`}
+                      className={row.probableDuplicate ? "dup" : undefined}
+                    >
+                      <td>
+                        <input
+                          className="chk"
+                          type="checkbox"
+                          aria-label={messages.screens.importsRowAria(
+                            row.description,
+                          )}
+                          checked={isIncluded(index, row.include)}
+                          onChange={() =>
+                            setIncludeOverrides((current) => ({
+                              ...current,
+                              [index]: !isIncluded(index, row.include),
+                            }))
+                          }
+                        />
+                      </td>
+                      <td className="fig">{formatDdMm(row.date)}</td>
+                      <td>{row.description}</td>
+                      <td>
+                        {row.probableDuplicate
+                          ? messages.screens.importsStatusDuplicate
+                          : messages.screens.importsStatusNew}
+                      </td>
+                      <td
+                        className={`num fig ${
+                          row.amountCents > 0
+                            ? "pos"
+                            : row.amountCents < 0
+                              ? "neg"
+                              : "text-foreground"
+                        }`}
+                      >
+                        {formatSignedCentsToBrl(row.amountCents)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <div className="mt-6 flex flex-wrap justify-end gap-3 border-t border-border pt-6">
+            <Link className="btn btn--card" href="/app/imports">
               {messages.imports.cancel}
             </Link>
+            <button
+              className="btn btn--ink"
+              type="button"
+              disabled={pending || selectedCount === 0}
+              onClick={onConfirm}
+            >
+              {messages.screens.importsConfirmCount(selectedCount)}
+            </button>
           </div>
-        </div>
+        </section>
       ) : null}
     </div>
   );

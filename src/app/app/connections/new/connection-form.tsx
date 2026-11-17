@@ -19,20 +19,20 @@ export function ConnectionForm({ entities }: Props) {
   );
 
   return (
-    <form action={action} className="flex flex-col gap-3">
-      <label className="flex flex-col gap-1 text-sm">
-        {messages.connections.itemId}
+    <form action={action} className="flex flex-col gap-4">
+      <label className="field">
+        <span className="lbl">{messages.connections.itemId}</span>
         <input
-          className="rounded border px-3 py-2"
+          className="inp"
           name="itemId"
           required
           placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
         />
-        <span className="text-zinc-600">{messages.connections.itemIdHint}</span>
+        <span className="lbl">{messages.connections.itemIdHint}</span>
       </label>
-      <label className="flex flex-col gap-1 text-sm">
-        {messages.connections.entity}
-        <select className="rounded border px-3 py-2" name="entityId" required>
+      <label className="field">
+        <span className="lbl">{messages.connections.entity}</span>
+        <select className="inp" name="entityId" required defaultValue="">
           <option value="">{messages.transactions.filterAll}</option>
           {entities.map((entity) => (
             <option key={entity.id} value={entity.id}>
@@ -42,17 +42,15 @@ export function ConnectionForm({ entities }: Props) {
         </select>
       </label>
       {state?.error ? (
-        <p className="text-sm text-red-700">{state.error}</p>
+        <p role="alert" className="neg text-sm font-medium">
+          {state.error}
+        </p>
       ) : null}
-      <div className="flex flex-wrap gap-3">
-        <button
-          className="rounded bg-zinc-900 px-4 py-2 text-sm text-white disabled:opacity-50"
-          type="submit"
-          disabled={pending}
-        >
+      <div className="mt-2 flex flex-wrap gap-3">
+        <button className="btn btn--ink" type="submit" disabled={pending}>
           {messages.connections.save}
         </button>
-        <Link className="self-center text-sm underline" href="/app/connections">
+        <Link className="btn btn--card" href="/app/connections">
           {messages.connections.cancel}
         </Link>
       </div>
