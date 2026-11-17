@@ -109,4 +109,81 @@ describe("lookupFxRate", () => {
       sellRate: "1",
     });
   });
+
+  test("months-old stored rate triggers a fetch for the lookback window", async () => {
+    await upsertFxRates([
+      {
+        currency: "GBP",
+        date: "2025-12-31",
+        buyRate: "7.00000",
+        sellRate: "7.00100",
+      },
+    ]);
+
+    const requestedUrls: string[] = [];
+    const fetchImpl: typeof fetch = async (input) => {
+      requestedUrls.push(String(input));
+      return new Response(fixture("cotacao-moeda-periodo-usd.json"), {
+        status: 200,
+      });
+    };
+
+    const result = await lookupFxRate("GBP", "2026-11-17", fetchImpl);
+    expect(requestedUrls).toHaveLength(1);
+    expect(requestedUrls[0]).toContain("@dataInicial='11-03-2026'");
+    expect(requestedUrls[0]).toContain("@dataFinalCotacao='11-17-2026'");
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") {
+      return;
+    }
+    expect(result.date).toBe("2026-11-13");
+    expect(result.buyRate).toBe("5.6512");
+    expect(result.usedEarlierDate).toBe(true);
+  });
+
+  test("Friday rate is accepted for the following Monday without fetching", async () => {
+    await upsertFxRates([
+      {
+        currency: "CHF",
+        date: "2026-11-13",
+        buyRate: "6.20000",
+        sellRate: "6.20100",
+      },
+    ]);
+
+    const result = await lookupFxRate("CHF", "2026-11-16", async () => {
+      throw new Error("network should not be called");
+    });
+    expect(result).toEqual({
+      kind: "ok",
+      currency: "CHF",
+      date: "2026-11-13",
+      buyRate: "6.2",
+      sellRate: "6.201",
+      usedEarlierDate: true,
+    });
+  });
+
+  test("months-old stored rate returns stale when the fetch fails", async () => {
+    await upsertFxRates([
+      {
+        currency: "JPY",
+        date: "2025-12-31",
+        buyRate: "0.03700",
+        sellRate: "0.03710",
+      },
+    ]);
+
+    const result = await lookupFxRate("JPY", "2026-11-17", async () => {
+      throw new Error("offline");
+    });
+    expect(result).toEqual({
+      kind: "stale",
+      currency: "JPY",
+      date: "2025-12-31",
+      buyRate: "0.037",
+      sellRate: "0.0371",
+      requestedDate: "2026-11-17",
+    });
+  });
 });
