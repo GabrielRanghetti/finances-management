@@ -141,7 +141,7 @@ export default async function AccountsListPage({ searchParams }: Props) {
                   <tr key={account.id}>
                     <td>
                       <Link
-                        className="font-medium"
+                        className="font-medium text-foreground underline decoration-border underline-offset-[3px] hover:decoration-ring"
                         href={`/app/accounts/${account.id}`}
                       >
                         {messages.accounts.linkLabel(

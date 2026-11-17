@@ -105,7 +105,9 @@ export function PdfImportForm({ accounts }: Props) {
               value={accountId}
               onChange={(event) => setAccountId(event.target.value)}
             >
-              <option value="">{messages.transactions.filterAll}</option>
+              <option value="" disabled>
+                {messages.screens.importsSelectAccount}
+              </option>
               {accounts.map((account) => (
                 <option key={account.id} value={account.id}>
                   {account.name}

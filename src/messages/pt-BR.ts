@@ -401,6 +401,7 @@ export const messages = {
       "Planilha CSV exportada pelo banco, com mapeamento de colunas.",
     importsPdfDescription: "Extrato em PDF do Itaú.",
     importsOpenFlow: "Escolher arquivo",
+    importsSelectAccount: "Escolher conta",
     importsColumnImport: "Importar",
     importsColumnBankDescription: "Descrição no banco",
     importsColumnStatus: "Situação",

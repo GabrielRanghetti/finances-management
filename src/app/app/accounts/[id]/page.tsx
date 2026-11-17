@@ -177,12 +177,7 @@ export default async function AccountDetailPage({
             <dt className="lbl">{messages.accounts.entity}</dt>
             <dd className="mt-0.5 font-medium text-foreground">
               {account.entity
-                ? messages.entities.linkLabel(
-                    account.entity.name,
-                    account.entity.type === "pj"
-                      ? messages.entities.typePj
-                      : messages.entities.typePf,
-                  )
+                ? formatEntityLabel(account.entity.name, account.entity.type)
                 : messages.emptyValue}
             </dd>
           </div>
@@ -476,6 +471,14 @@ export default async function AccountDetailPage({
 function formatDateDdMmYyyy(isoDate: string): string {
   const [year, month, day] = isoDate.split("-");
   return day && month && year ? `${day}/${month}/${year}` : isoDate;
+}
+
+function formatEntityLabel(name: string, type: string): string {
+  const typeLabel =
+    type === "pj" ? messages.entities.typePj : messages.entities.typePf;
+  return name.trim().toLowerCase() === typeLabel.trim().toLowerCase()
+    ? name
+    : messages.entities.linkLabel(name, typeLabel);
 }
 
 function formatAccountCurrencyBalance(cents: number, currency: string): string {
