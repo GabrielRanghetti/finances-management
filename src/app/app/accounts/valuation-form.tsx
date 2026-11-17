@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 
+import { todayInSaoPaulo } from "@/domain/date";
 import { messages } from "@/messages/pt-BR";
 
 type FormState = { error?: string } | undefined;
@@ -18,7 +19,7 @@ type Props = {
 
 export function ValuationForm({ accountId, action, defaults }: Props) {
   const [state, formAction] = useActionState(action, undefined);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInSaoPaulo();
 
   return (
     <form action={formAction} className="flex flex-col gap-3">

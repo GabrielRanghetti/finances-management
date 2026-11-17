@@ -16,6 +16,7 @@ import {
 } from "@/db/transactions";
 import { listValuations } from "@/db/valuations";
 import type { AccountType } from "@/db/schema";
+import { todayInSaoPaulo } from "@/domain/date";
 import {
   statementPeriodContaining,
   statementTotalCents,
@@ -63,7 +64,7 @@ export default async function AccountDetailPage({
   }
 
   const amounts = (await listAccountAmounts(session.user.id, account.id)) ?? [];
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInSaoPaulo();
   const valuationRows = isValuedAccountType(account.type)
     ? await listValuations(session.user.id, account.id)
     : [];

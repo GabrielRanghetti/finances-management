@@ -5,8 +5,9 @@ export function parseBrlToCents(input: string): number {
     throw new Error("empty");
   }
 
-  const negative = trimmed.startsWith("-");
-  const raw = negative ? trimmed.slice(1) : trimmed;
+  const negative = trimmed.startsWith("-") || trimmed.startsWith("−");
+  const positive = trimmed.startsWith("+");
+  const raw = negative || positive ? trimmed.slice(1).trim() : trimmed;
   // Accept: 1234 | 1234,5 | 1234,56 | 1.234,56
   if (!/^\d{1,3}(\.\d{3})*(,\d{1,2})?$|^\d+(,\d{1,2})?$/.test(raw)) {
     throw new Error("invalid");
@@ -19,7 +20,7 @@ export function parseBrlToCents(input: string): number {
 }
 
 export function formatCentsToBrl(cents: number): string {
-  const sign = cents < 0 ? "-" : "";
+  const sign = cents < 0 ? "−" : "";
   const abs = Math.abs(cents);
   const whole = Math.floor(abs / 100);
   const fraction = String(abs % 100).padStart(2, "0");

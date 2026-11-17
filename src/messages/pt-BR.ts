@@ -4,11 +4,11 @@ export const messages = {
   emptyValue: "—",
   money: (formattedAmount: string) => `R$ ${formattedAmount}`,
   nav: {
-    dashboard: "Painel",
+    dashboard: "Visão geral",
     entities: "Entidades",
     accounts: "Contas",
     transactions: "Lançamentos",
-    imports: "Importar",
+    imports: "Importações",
     connections: "Conexões",
     investments: "Investimentos",
     budget: "Orçamento",
@@ -18,6 +18,7 @@ export const messages = {
     security: "Segurança",
     more: "Mais",
     mainAria: "Principal",
+    newTransaction: "Novo lançamento",
   },
   home: {
     title: "Finanças",

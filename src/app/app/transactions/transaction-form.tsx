@@ -3,6 +3,7 @@
 import { useActionState, useMemo, useState } from "react";
 import Link from "next/link";
 
+import { todayInSaoPaulo } from "@/domain/date";
 import { messages } from "@/messages/pt-BR";
 
 type FormState = { error?: string } | undefined;
@@ -37,7 +38,7 @@ export function TransactionForm({
   defaults,
 }: Props) {
   const [state, formAction] = useActionState(action, undefined);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInSaoPaulo();
   const [accountId, setAccountId] = useState(
     defaults?.accountId ?? accounts[0]?.id ?? "",
   );

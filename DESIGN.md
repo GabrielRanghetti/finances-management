@@ -54,7 +54,7 @@ Use plain words over accounting terms.
 
 ## Layout
 
-- A top bar holds the app name, the main destinations and one filled action. Destinations that do not fit sit under "Mais". Below 60rem the destinations scroll sideways or collapse; they never wrap into a second row of links.
+- A top bar holds the app name, the main destinations, the scope groove (on screens that filter by scope) and one filled action. Destinations that do not fit sit under "Mais". Below 60rem the bar and destinations wrap so every destination stays reachable on screen.
 - A screen's content sits on one sheet. Sections inside it are separated by rules. Do not put a card inside a card.
 - Lists of records are tables: sentence-case heads that do not wrap, horizontal rules only, no outer border. A wide table scrolls inside its own box on a phone.
 - The scope toggle (Pessoal, Empresa, Tudo) is a groove with the chosen option raised. The choice lives in the URL.
