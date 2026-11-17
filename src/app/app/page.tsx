@@ -2,7 +2,11 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { getNetWorthOverview, type OverviewHistoryPoint } from "@/db/overview";
+import {
+  getNetWorthOverview,
+  type OverviewHistoryPoint,
+  type OverviewMonthSummary,
+} from "@/db/overview";
 import { todayInSaoPaulo } from "@/domain/date";
 import {
   formatBalanceCentsToBrl,
@@ -89,7 +93,10 @@ function accountClassLabel(accountClass: string): string {
   return types[accountClass] ?? accountClass;
 }
 
-function computeChartGeometry(points: readonly OverviewHistoryPoint[]) {
+function computeChartGeometry(
+  points: readonly OverviewHistoryPoint[],
+  box: { xStart: number; xEnd: number; yTop: number; yBottom: number },
+) {
   const values =
     points.length > 0 ? points.map((point) => point.netWorthCents) : [0];
   const minVal = Math.min(...values);
@@ -109,10 +116,7 @@ function computeChartGeometry(points: readonly OverviewHistoryPoint[]) {
   const mid = Math.round((lo + hi) / 2);
   const span = hi - lo || 1;
 
-  const yTop = 16;
-  const yBottom = 140;
-  const xStart = 8;
-  const xEnd = 632;
+  const { xStart, xEnd, yTop, yBottom } = box;
   const count = Math.max(points.length, 1);
 
   const coords = points.map((point, index) => {
@@ -142,6 +146,47 @@ function computeChartGeometry(points: readonly OverviewHistoryPoint[]) {
   };
 }
 
+function MonthSummaryBlock({
+  monthSummary,
+  scope,
+}: {
+  monthSummary: OverviewMonthSummary;
+  scope: OverviewScope;
+}) {
+  return (
+    <>
+      <h2 className="text-base font-semibold text-foreground">
+        {messages.overview.monthSummaryTitle}
+      </h2>
+      <dl className="mt-3 flex flex-col gap-2 text-sm">
+        <div className="row">
+          <dt className="text-muted-foreground">{messages.overview.moneyIn}</dt>
+          <dd className={`fig ${signedColorClass(monthSummary.inCents)}`}>
+            {formatSignedCentsToBrl(monthSummary.inCents, true)}
+          </dd>
+        </div>
+        <div className="row">
+          <dt className="text-muted-foreground">
+            {messages.overview.moneyOut}
+          </dt>
+          <dd className={`fig ${balanceColorClass(monthSummary.outCents)}`}>
+            {formatBalanceCentsToBrl(monthSummary.outCents, true)}
+          </dd>
+        </div>
+        <div className="row border-t border-border pt-2 font-semibold">
+          <dt className="text-foreground">{messages.overview.moneyLeft}</dt>
+          <dd className={`fig ${signedColorClass(monthSummary.leftCents)}`}>
+            {formatSignedCentsToBrl(monthSummary.leftCents, true)}
+          </dd>
+        </div>
+      </dl>
+      <p className="mt-3 text-xs font-medium text-muted-foreground">
+        {scopeTransferNote(scope)}
+      </p>
+    </>
+  );
+}
+
 export default async function AppHomePage({ searchParams }: Props = {}) {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -157,11 +202,35 @@ export default async function AppHomePage({ searchParams }: Props = {}) {
   const overview = await getNetWorthOverview(session.user.id, scope, today);
   const title = scopeTitle(overview.scope);
 
-  const chart = computeChartGeometry(overview.history);
+  const desktopChart = computeChartGeometry(overview.history, {
+    xStart: 104,
+    xEnd: 632,
+    yTop: 16,
+    yBottom: 140,
+  });
+  const mobileChart = computeChartGeometry(overview.history, {
+    xStart: 96,
+    xEnd: 294,
+    yTop: 16,
+    yBottom: 124,
+  });
   const firstPointCents = overview.history[0]?.netWorthCents ?? 0;
   const lastPointCents =
     overview.history[overview.history.length - 1]?.netWorthCents ??
     overview.netWorthCents;
+  const chartAriaLabel = messages.overview.chartAria(
+    title,
+    formatBalanceCentsToBrl(firstPointCents, true),
+    formatBalanceCentsToBrl(lastPointCents, true),
+  );
+  const mobileLabelIndices = new Set([
+    0,
+    2,
+    4,
+    6,
+    8,
+    Math.max(mobileChart.coords.length - 1, 0),
+  ]);
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-6 min-[60rem]:px-10 min-[60rem]:py-10">
@@ -176,8 +245,8 @@ export default async function AppHomePage({ searchParams }: Props = {}) {
           </div>
         </article>
       ) : (
-        <div className="flex flex-col gap-8 min-[60rem]:flex-row min-[60rem]:items-start min-[60rem]:gap-10">
-          <article className="sheet min-w-0 flex-1 p-5 min-[60rem]:p-10">
+        <div className="flex flex-col gap-6 min-[60rem]:flex-row min-[60rem]:items-start min-[60rem]:gap-10">
+          <article className="sheet min-w-0 flex-1 p-5 min-[60rem]:px-12 min-[60rem]:pt-10 min-[60rem]:pb-8">
             <div>
               <p className="lbl">
                 {messages.overview.headingWithDate(
@@ -186,13 +255,13 @@ export default async function AppHomePage({ searchParams }: Props = {}) {
                 )}
               </p>
               <h1
-                className={`fig mt-1 text-4xl font-semibold tracking-tight break-words whitespace-normal min-[60rem]:text-5xl ${balanceColorClass(
+                className={`fig mt-1 text-[2.5rem] leading-[1.15] font-semibold tracking-tight break-words whitespace-normal min-[60rem]:text-[3.5rem] min-[60rem]:leading-[1.1] ${balanceColorClass(
                   overview.netWorthCents,
                 )}`}
               >
                 {formatBalanceCentsToBrl(overview.netWorthCents, true)}
               </h1>
-              <p className="mt-2 text-sm text-foreground">
+              <p className="mt-1 text-sm text-foreground min-[60rem]:mt-2 min-[60rem]:text-base">
                 <span
                   className={`fig ${signedColorClass(
                     overview.changeMonthCents,
@@ -214,15 +283,12 @@ export default async function AppHomePage({ searchParams }: Props = {}) {
               </p>
             </div>
 
+            {/* Desktop chart (640x170 viewBox) */}
             <svg
               viewBox="0 0 640 170"
               role="img"
-              aria-label={messages.overview.chartAria(
-                title,
-                formatBalanceCentsToBrl(firstPointCents, true),
-                formatBalanceCentsToBrl(lastPointCents, true),
-              )}
-              className="mt-8 block h-auto w-full"
+              aria-label={chartAriaLabel}
+              className="mt-8 hidden h-auto w-full min-[60rem]:block"
             >
               <line
                 x1="0"
@@ -248,41 +314,41 @@ export default async function AppHomePage({ searchParams }: Props = {}) {
               <text
                 x="0"
                 y="11"
-                className="fill-muted-foreground font-mono text-[11px]"
+                className="fill-muted-foreground font-sans text-[11px] tabular-nums"
               >
-                {formatBalanceCentsToBrl(chart.hi, true)}
+                {formatBalanceCentsToBrl(desktopChart.hi, true)}
               </text>
               <text
                 x="0"
                 y="73"
-                className="fill-muted-foreground font-mono text-[11px]"
+                className="fill-muted-foreground font-sans text-[11px] tabular-nums"
               >
-                {formatBalanceCentsToBrl(chart.mid, true)}
+                {formatBalanceCentsToBrl(desktopChart.mid, true)}
               </text>
               <text
                 x="0"
                 y="135"
-                className="fill-muted-foreground font-mono text-[11px]"
+                className="fill-muted-foreground font-sans text-[11px] tabular-nums"
               >
-                {formatBalanceCentsToBrl(chart.lo, true)}
+                {formatBalanceCentsToBrl(desktopChart.lo, true)}
               </text>
               <polyline
-                points={chart.polylinePoints}
+                points={desktopChart.polylinePoints}
                 className="fill-none stroke-foreground stroke-2"
                 strokeLinejoin="round"
                 strokeLinecap="round"
               />
               <circle
-                cx={chart.lastCoord.x}
-                cy={chart.lastCoord.y}
+                cx={desktopChart.lastCoord.x}
+                cy={desktopChart.lastCoord.y}
                 r="4"
                 className="fill-foreground"
               />
-              {chart.coords.map((pt, idx) => {
+              {desktopChart.coords.map((pt, idx) => {
                 const anchor =
                   idx === 0
                     ? "start"
-                    : idx === chart.coords.length - 1
+                    : idx === desktopChart.coords.length - 1
                       ? "end"
                       : "middle";
                 return (
@@ -298,15 +364,109 @@ export default async function AppHomePage({ searchParams }: Props = {}) {
                 );
               })}
             </svg>
-            <p className="lbl mt-1">
-              {chart.lo !== 0
+
+            {/* Phone chart (300x150 viewBox so 11px text stays >= 11px at 390px) */}
+            <svg
+              viewBox="0 0 300 150"
+              role="img"
+              aria-label={chartAriaLabel}
+              className="mt-4 block h-auto w-full min-[60rem]:hidden"
+            >
+              <line
+                x1="0"
+                y1="16"
+                x2="300"
+                y2="16"
+                className="stroke-border stroke-1"
+              />
+              <line
+                x1="0"
+                y1="70"
+                x2="300"
+                y2="70"
+                className="stroke-border stroke-1"
+              />
+              <line
+                x1="0"
+                y1="124"
+                x2="300"
+                y2="124"
+                className="stroke-border stroke-1"
+              />
+              <text
+                x="0"
+                y="11"
+                className="fill-muted-foreground font-sans text-[11px] tabular-nums"
+              >
+                {formatBalanceCentsToBrl(mobileChart.hi, true)}
+              </text>
+              <text
+                x="0"
+                y="65"
+                className="fill-muted-foreground font-sans text-[11px] tabular-nums"
+              >
+                {formatBalanceCentsToBrl(mobileChart.mid, true)}
+              </text>
+              <text
+                x="0"
+                y="119"
+                className="fill-muted-foreground font-sans text-[11px] tabular-nums"
+              >
+                {formatBalanceCentsToBrl(mobileChart.lo, true)}
+              </text>
+              <polyline
+                points={mobileChart.polylinePoints}
+                className="fill-none stroke-foreground stroke-2"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+              <circle
+                cx={mobileChart.lastCoord.x}
+                cy={mobileChart.lastCoord.y}
+                r="4"
+                className="fill-foreground"
+              />
+              {mobileChart.coords.map((pt, idx) => {
+                if (!mobileLabelIndices.has(idx)) {
+                  return null;
+                }
+                const anchor =
+                  idx === 0
+                    ? "start"
+                    : idx === mobileChart.coords.length - 1
+                      ? "end"
+                      : "middle";
+                return (
+                  <text
+                    key={pt.date || idx}
+                    x={pt.x}
+                    y="144"
+                    textAnchor={anchor}
+                    className="fill-muted-foreground font-sans text-[11px]"
+                  >
+                    {formatMonthShortName(pt.date)}
+                  </text>
+                );
+              })}
+            </svg>
+
+            <p className="lbl mt-1 text-xs min-[60rem]:text-sm">
+              {desktopChart.lo !== 0
                 ? messages.overview.chartCaptionNonZero(
-                    formatBalanceCentsToBrl(chart.lo, true),
+                    formatBalanceCentsToBrl(desktopChart.lo, true),
                   )
                 : messages.overview.chartCaptionZero}
             </p>
 
-            <div className="mt-8 overflow-x-auto">
+            {/* Phone order: Net worth -> Month summary -> Tables */}
+            <section className="mt-6 border-t border-border pt-5 min-[60rem]:hidden">
+              <MonthSummaryBlock
+                monthSummary={overview.monthSummary}
+                scope={overview.scope}
+              />
+            </section>
+
+            <div className="mt-6 overflow-x-auto min-[60rem]:mt-8">
               <table className="tbl">
                 <thead>
                   <tr>
@@ -491,60 +651,11 @@ export default async function AppHomePage({ searchParams }: Props = {}) {
           </article>
 
           <aside className="flex w-full flex-col gap-6 min-[60rem]:w-80 min-[60rem]:shrink-0">
-            <section className="border-b border-border pb-6">
-              <h2 className="text-base font-semibold text-foreground">
-                {messages.overview.monthSummaryTitle}
-              </h2>
-              <dl className="mt-3 flex flex-col gap-2 text-sm">
-                <div className="row">
-                  <dt className="text-muted-foreground">
-                    {messages.overview.moneyIn}
-                  </dt>
-                  <dd
-                    className={`fig ${signedColorClass(
-                      overview.monthSummary.inCents,
-                    )}`}
-                  >
-                    {formatSignedCentsToBrl(
-                      overview.monthSummary.inCents,
-                      true,
-                    )}
-                  </dd>
-                </div>
-                <div className="row">
-                  <dt className="text-muted-foreground">
-                    {messages.overview.moneyOut}
-                  </dt>
-                  <dd
-                    className={`fig ${balanceColorClass(
-                      overview.monthSummary.outCents,
-                    )}`}
-                  >
-                    {formatBalanceCentsToBrl(
-                      overview.monthSummary.outCents,
-                      true,
-                    )}
-                  </dd>
-                </div>
-                <div className="row border-t border-border pt-2 font-semibold">
-                  <dt className="text-foreground">
-                    {messages.overview.moneyLeft}
-                  </dt>
-                  <dd
-                    className={`fig ${signedColorClass(
-                      overview.monthSummary.leftCents,
-                    )}`}
-                  >
-                    {formatSignedCentsToBrl(
-                      overview.monthSummary.leftCents,
-                      true,
-                    )}
-                  </dd>
-                </div>
-              </dl>
-              <p className="mt-3 text-xs font-medium text-muted-foreground">
-                {scopeTransferNote(overview.scope)}
-              </p>
+            <section className="hidden border-b border-border pb-6 min-[60rem]:block">
+              <MonthSummaryBlock
+                monthSummary={overview.monthSummary}
+                scope={overview.scope}
+              />
             </section>
 
             <section className="border-b border-border pb-6">
