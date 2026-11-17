@@ -138,7 +138,9 @@
   * {
     @apply border-border outline-ring/50;
   }
-  *:focus-visible {
+  *:focus-visible,
+  input[type="date"]:focus,
+  input[type="date"]:focus-within {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
@@ -293,7 +295,10 @@
     font: inherit;
     font-size: 0.875rem;
   }
-  .inp:focus-visible {
+  .inp:focus,
+  .inp:focus-visible,
+  .inp:focus-within {
+    outline: 2px solid var(--ring);
     outline-offset: -2px;
   }
   .chk {

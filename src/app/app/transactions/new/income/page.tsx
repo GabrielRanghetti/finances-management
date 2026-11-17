@@ -27,14 +27,18 @@ export default async function NewIncomePage() {
   );
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 p-6">
-      <h1 className="text-2xl font-semibold">{messages.transactions.newIncome}</h1>
-      <TransactionForm
-        mode="income"
-        action={createIncomeAction}
-        accounts={accounts}
-        categories={incomeCategories}
-      />
+    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-6 min-[60rem]:px-10 min-[60rem]:py-10">
+      <section className="sheet flex flex-col gap-6 p-6 min-[60rem]:p-8">
+        <h1 className="text-[1.44rem] font-semibold tracking-tight text-foreground">
+          {messages.transactions.newIncome}
+        </h1>
+        <TransactionForm
+          mode="income"
+          action={createIncomeAction}
+          accounts={accounts}
+          categories={incomeCategories}
+        />
+      </section>
     </main>
   );
 }

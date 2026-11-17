@@ -50,48 +50,62 @@ export function TransactionForm({
     mode === "expense" && selectedAccount?.type === "credit_card";
 
   return (
-    <form action={formAction} className="flex flex-col gap-3">
+    <form action={formAction} className="flex flex-col gap-4">
       {mode !== "installment-group" ? (
-        <label className="flex flex-col gap-1 text-sm">
-          {messages.transactions.date}
+        <div className="field">
+          <label className="lbl" htmlFor="tx-date">
+            {messages.transactions.date}
+          </label>
           <input
-            className="rounded border px-3 py-2"
+            id="tx-date"
+            className="inp"
             type="date"
             name="date"
             required
             defaultValue={defaults?.date ?? today}
           />
-        </label>
+        </div>
       ) : null}
+
       {mode !== "installment-group" ? (
-        <label className="flex flex-col gap-1 text-sm">
-          {messages.transactions.amount}
+        <div className="field">
+          <label className="lbl" htmlFor="tx-amount">
+            {messages.transactions.amount}
+          </label>
           <input
-            className="rounded border px-3 py-2"
+            id="tx-amount"
+            className="inp fig"
             name="amount"
             required
             placeholder={messages.transactions.amountPlaceholder}
             inputMode="decimal"
             defaultValue={defaults?.amount ?? ""}
           />
-        </label>
+        </div>
       ) : null}
-      <label className="flex flex-col gap-1 text-sm">
-        {messages.transactions.description}
+
+      <div className="field">
+        <label className="lbl" htmlFor="tx-description">
+          {messages.transactions.description}
+        </label>
         <input
-          className="rounded border px-3 py-2"
+          id="tx-description"
+          className="inp"
           name="description"
           required
           defaultValue={defaults?.description ?? ""}
         />
-      </label>
+      </div>
 
       {mode === "transfer" ? (
         <>
-          <label className="flex flex-col gap-1 text-sm">
-            {messages.transactions.fromAccount}
+          <div className="field">
+            <label className="lbl" htmlFor="tx-from-account">
+              {messages.transactions.fromAccount}
+            </label>
             <select
-              className="rounded border px-3 py-2"
+              id="tx-from-account"
+              className="inp"
               name="fromAccountId"
               required
               defaultValue={
@@ -104,11 +118,14 @@ export function TransactionForm({
                 </option>
               ))}
             </select>
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            {messages.transactions.toAccount}
+          </div>
+          <div className="field">
+            <label className="lbl" htmlFor="tx-to-account">
+              {messages.transactions.toAccount}
+            </label>
             <select
-              className="rounded border px-3 py-2"
+              id="tx-to-account"
+              className="inp"
               name="toAccountId"
               required
               defaultValue={
@@ -124,13 +141,16 @@ export function TransactionForm({
                 </option>
               ))}
             </select>
-          </label>
+          </div>
         </>
       ) : mode !== "installment-group" ? (
-        <label className="flex flex-col gap-1 text-sm">
-          {messages.transactions.account}
+        <div className="field">
+          <label className="lbl" htmlFor="tx-account">
+            {messages.transactions.account}
+          </label>
           <select
-            className="rounded border px-3 py-2"
+            id="tx-account"
+            className="inp"
             name="accountId"
             required
             value={accountId}
@@ -142,61 +162,74 @@ export function TransactionForm({
               </option>
             ))}
           </select>
-        </label>
+        </div>
       ) : null}
 
       {showInstallments ? (
-        <label className="flex flex-col gap-1 text-sm">
-          {messages.transactions.installments}
+        <div className="field">
+          <label className="lbl" htmlFor="tx-installments">
+            {messages.transactions.installments}
+          </label>
           <input
-            className="rounded border px-3 py-2"
+            id="tx-installments"
+            className="inp fig"
             name="installmentCount"
             type="number"
             min={1}
             max={60}
             defaultValue={defaults?.installmentCount ?? 1}
           />
-          <span className="text-zinc-600">
+          <span className="lbl">
             {messages.transactions.installmentsHint}
           </span>
-        </label>
+        </div>
       ) : null}
 
-      <label className="flex flex-col gap-1 text-sm">
-        {messages.transactions.category}
+      <div className="field">
+        <label className="lbl" htmlFor="tx-category">
+          {messages.transactions.category}
+        </label>
         <select
-          className="rounded border px-3 py-2"
+          id="tx-category"
+          className="inp"
           name="categoryId"
           defaultValue={defaults?.categoryId ?? ""}
         >
-          <option value="">{messages.transactions.filterAll}</option>
+          <option value="">{messages.transactions.uncategorized}</option>
           {categories.map((category) => (
             <option key={category.id} value={category.id}>
               {category.name}
             </option>
           ))}
         </select>
-      </label>
+      </div>
 
       {mode !== "installment-group" ? (
-        <label className="flex flex-col gap-1 text-sm">
-          {messages.transactions.notes}
+        <div className="field">
+          <label className="lbl" htmlFor="tx-notes">
+            {messages.transactions.notes}
+          </label>
           <textarea
-            className="rounded border px-3 py-2"
+            id="tx-notes"
+            className="inp"
             name="notes"
             rows={2}
             defaultValue={defaults?.notes ?? ""}
           />
-        </label>
+        </div>
       ) : null}
 
-      {state?.error ? <p className="text-sm text-red-700">{state.error}</p> : null}
+      {state?.error ? (
+        <p role="alert" className="neg text-sm">
+          {state.error}
+        </p>
+      ) : null}
 
-      <div className="flex gap-3">
-        <button className="rounded bg-black px-3 py-2 text-white" type="submit">
+      <div className="mt-2 flex flex-wrap gap-3">
+        <button className="btn btn--ink" type="submit">
           {messages.transactions.save}
         </button>
-        <Link className="self-center underline" href="/app/transactions">
+        <Link className="btn btn--card" href="/app/transactions">
           {messages.transactions.cancel}
         </Link>
       </div>

@@ -42,23 +42,25 @@ export default async function EditValuationPage({ params }: Props) {
   const remove = deleteValuationAction.bind(null, account.id, valuation.id);
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 p-6">
-      <h1 className="text-2xl font-semibold">
-        {messages.accounts.valuationEdit}
-      </h1>
-      <ValuationForm
-        accountId={account.id}
-        action={action}
-        defaults={{
-          date: valuation.date,
-          value: formatCentsToBrl(valuation.valueCents),
-        }}
-      />
-      <form action={remove}>
-        <button className="rounded border px-3 py-2 text-sm" type="submit">
-          {messages.accounts.valuationDelete}
-        </button>
-      </form>
+    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-6 min-[60rem]:px-10 min-[60rem]:py-10">
+      <section className="sheet flex flex-col gap-6 p-6 min-[60rem]:p-8">
+        <h1 className="text-[1.44rem] font-semibold tracking-tight text-foreground">
+          {messages.accounts.valuationEdit}
+        </h1>
+        <ValuationForm
+          accountId={account.id}
+          action={action}
+          defaults={{
+            date: valuation.date,
+            value: formatCentsToBrl(valuation.valueCents),
+          }}
+        />
+        <form action={remove} className="border-t border-border pt-4">
+          <button className="btn btn--card" type="submit">
+            {messages.accounts.valuationDelete}
+          </button>
+        </form>
+      </section>
     </main>
   );
 }

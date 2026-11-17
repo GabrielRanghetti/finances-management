@@ -68,41 +68,46 @@ export default async function EditTransactionPage({ params }: Props) {
     );
 
     return (
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 p-6">
-        <h1 className="text-2xl font-semibold">
-          {messages.transactions.editInstallments}
-        </h1>
-        <ul className="flex flex-col gap-1 text-sm">
-          {group.map((row) => (
-            <li key={row.id}>
-              {row.date}
-              {" · "}
-              {messages.money(formatCentsToBrl(row.amountCents))}
-              {" · "}
-              {row.description}
-            </li>
-          ))}
-        </ul>
-        <TransactionForm
-          mode="installment-group"
-          action={action}
-          accounts={accounts}
-          categories={kindCategories}
-          defaults={{
-            date: group[0].date,
-            amount: formatCentsToBrl(
-              Math.abs(group.reduce((sum, row) => sum + row.amountCents, 0)),
-            ),
-            description: installmentBaseDescription(group[0].description),
-            notes: group[0].notes,
-            categoryId: group[0].categoryId,
-          }}
-        />
-        <form action={cancel}>
-          <button className="rounded border px-3 py-2 text-sm" type="submit">
-            {messages.transactions.cancelInstallments}
-          </button>
-        </form>
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-6 min-[60rem]:px-10 min-[60rem]:py-10">
+        <section className="sheet flex flex-col gap-6 p-6 min-[60rem]:p-8">
+          <h1 className="text-[1.44rem] font-semibold tracking-tight text-foreground">
+            {messages.transactions.editInstallments}
+          </h1>
+          <ul className="flex flex-col gap-1 text-sm">
+            {group.map((row) => (
+              <li key={row.id} className="row border-b border-border py-1.5">
+                <span>
+                  <span className="fig">{row.date}</span>
+                  {" · "}
+                  {row.description}
+                </span>
+                <span className="fig neg">
+                  {messages.money(formatCentsToBrl(row.amountCents))}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <TransactionForm
+            mode="installment-group"
+            action={action}
+            accounts={accounts}
+            categories={kindCategories}
+            defaults={{
+              date: group[0].date,
+              amount: formatCentsToBrl(
+                Math.abs(group.reduce((sum, row) => sum + row.amountCents, 0)),
+              ),
+              description: installmentBaseDescription(group[0].description),
+              notes: group[0].notes,
+              categoryId: group[0].categoryId,
+            }}
+          />
+          <form action={cancel} className="border-t border-border pt-4">
+            <button className="btn btn--card" type="submit">
+              {messages.transactions.cancelInstallments}
+            </button>
+          </form>
+        </section>
       </main>
     );
   }
@@ -120,30 +125,32 @@ export default async function EditTransactionPage({ params }: Props) {
     const action = updateTransferAction.bind(null, pair.transferId);
 
     return (
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 p-6">
-        <h1 className="text-2xl font-semibold">
-          {messages.transactions.editTransfer}
-        </h1>
-        <TransactionForm
-          mode="transfer"
-          action={action}
-          accounts={accounts}
-          categories={transferCategories}
-          defaults={{
-            date: pair.from.date,
-            amount: formatCentsToBrl(Math.abs(pair.from.amountCents)),
-            description: pair.from.description,
-            notes: pair.from.notes,
-            categoryId: pair.from.categoryId,
-            fromAccountId: pair.from.accountId,
-            toAccountId: pair.to.accountId,
-          }}
-        />
-        <form action={deleteAction}>
-          <button className="rounded border px-3 py-2 text-sm" type="submit">
-            {messages.transactions.delete}
-          </button>
-        </form>
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-6 min-[60rem]:px-10 min-[60rem]:py-10">
+        <section className="sheet flex flex-col gap-6 p-6 min-[60rem]:p-8">
+          <h1 className="text-[1.44rem] font-semibold tracking-tight text-foreground">
+            {messages.transactions.editTransfer}
+          </h1>
+          <TransactionForm
+            mode="transfer"
+            action={action}
+            accounts={accounts}
+            categories={transferCategories}
+            defaults={{
+              date: pair.from.date,
+              amount: formatCentsToBrl(Math.abs(pair.from.amountCents)),
+              description: pair.from.description,
+              notes: pair.from.notes,
+              categoryId: pair.from.categoryId,
+              fromAccountId: pair.from.accountId,
+              toAccountId: pair.to.accountId,
+            }}
+          />
+          <form action={deleteAction} className="border-t border-border pt-4">
+            <button className="btn btn--card" type="submit">
+              {messages.transactions.delete}
+            </button>
+          </form>
+        </section>
       </main>
     );
   }
@@ -164,27 +171,31 @@ export default async function EditTransactionPage({ params }: Props) {
   );
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 p-6">
-      <h1 className="text-2xl font-semibold">{title}</h1>
-      <TransactionForm
-        mode={mode}
-        action={action}
-        accounts={accounts}
-        categories={kindCategories}
-        defaults={{
-          date: transaction.date,
-          amount: formatCentsToBrl(Math.abs(transaction.amountCents)),
-          description: transaction.description,
-          notes: transaction.notes,
-          categoryId: transaction.categoryId,
-          accountId: transaction.accountId,
-        }}
-      />
-      <form action={deleteAction}>
-        <button className="rounded border px-3 py-2 text-sm" type="submit">
-          {messages.transactions.delete}
-        </button>
-      </form>
+    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-6 min-[60rem]:px-10 min-[60rem]:py-10">
+      <section className="sheet flex flex-col gap-6 p-6 min-[60rem]:p-8">
+        <h1 className="text-[1.44rem] font-semibold tracking-tight text-foreground">
+          {title}
+        </h1>
+        <TransactionForm
+          mode={mode}
+          action={action}
+          accounts={accounts}
+          categories={kindCategories}
+          defaults={{
+            date: transaction.date,
+            amount: formatCentsToBrl(Math.abs(transaction.amountCents)),
+            description: transaction.description,
+            notes: transaction.notes,
+            categoryId: transaction.categoryId,
+            accountId: transaction.accountId,
+          }}
+        />
+        <form action={deleteAction} className="border-t border-border pt-4">
+          <button className="btn btn--card" type="submit">
+            {messages.transactions.delete}
+          </button>
+        </form>
+      </section>
     </main>
   );
 }
